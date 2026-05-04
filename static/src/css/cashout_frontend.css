@@ -1,0 +1,564 @@
+/* ============================================================
+   Cashout Payment Pro — Frontend CSS
+   ============================================================ */
+
+/* ── Root / Variables ─────────────────────────────────────── */
+:root {
+    --bkash:        #E2136E;
+    --bkash-light:  #fde8f3;
+    --bkash-dark:   #b8005a;
+    --nagad:        #F5A623;
+    --nagad-light:  #fff3dc;
+    --nagad-dark:   #c47d00;
+    --success:      #198754;
+    --bg:           #f7f8fc;
+    --card-bg:      #ffffff;
+    --text:         #1a1a2e;
+    --text-muted:   #6c757d;
+    --border:       #e3e6f0;
+    --radius:       14px;
+    --radius-sm:    8px;
+    --shadow:       0 4px 24px rgba(0,0,0,.08);
+    --shadow-hover: 0 8px 32px rgba(0,0,0,.14);
+}
+
+/* ── Wrap ─────────────────────────────────────────────────── */
+.cashout-wrap {
+    background: var(--bg);
+    min-height: 100vh;
+}
+
+/* ── Banner ───────────────────────────────────────────────── */
+.cashout-banner {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 60%, #0f3460 100%);
+    color: #fff;
+}
+.cashout-title {
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: #fff;
+    letter-spacing: -.3px;
+}
+.cashout-subtitle {
+    color: rgba(255,255,255,.7);
+    font-size: .95rem;
+}
+.cashout-amount-pill {
+    background: rgba(255,255,255,.12);
+    border: 1px solid rgba(255,255,255,.2);
+    border-radius: 50px;
+    padding: .45rem 1.2rem;
+    text-align: center;
+    backdrop-filter: blur(6px);
+}
+.pill-label {
+    display: block;
+    font-size: .7rem;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    color: rgba(255,255,255,.6);
+}
+.pill-amount {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: #fff;
+}
+
+/* ── Stepper ──────────────────────────────────────────────── */
+.cashout-stepper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+}
+.cashout-step-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: .35rem;
+}
+.step-bubble {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    border: 2px solid var(--border);
+    background: var(--card-bg);
+    color: #aaa;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 1rem;
+    transition: all .3s;
+}
+.step-label {
+    font-size: .75rem;
+    color: #aaa;
+    font-weight: 500;
+    transition: all .3s;
+    white-space: nowrap;
+}
+.step-connector {
+    flex: 1;
+    max-width: 80px;
+    height: 2px;
+    background: var(--border);
+    margin: 0 .5rem;
+    margin-bottom: 1.4rem;
+    transition: background .3s;
+}
+.cashout-step-item.active .step-bubble {
+    background: linear-gradient(135deg, #1a1a2e, #0f3460);
+    border-color: #0f3460;
+    color: #fff;
+    box-shadow: 0 0 0 4px rgba(15,52,96,.15);
+}
+.cashout-step-item.active .step-label { color: var(--text); font-weight: 700; }
+.cashout-step-item.done .step-bubble {
+    background: var(--success);
+    border-color: var(--success);
+    color: #fff;
+}
+.cashout-step-item.done .step-label { color: var(--success); }
+
+/* ── Method Cards (Step 1) ────────────────────────────────── */
+.method-card {
+    background: var(--card-bg);
+    border: 2px solid var(--border);
+    border-radius: var(--radius);
+    padding: 2rem 1.5rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all .25s;
+    box-shadow: var(--shadow);
+}
+.method-card:hover, .method-card:focus {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-hover);
+    outline: none;
+}
+.bkash-method:hover  { border-color: var(--bkash); }
+.nagad-method:hover  { border-color: var(--nagad); }
+
+.method-logo-wrap {
+    width: 90px;
+    height: 50px;
+    border-radius: 10px;
+    margin: 0 auto 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.bkash-logo-wrap { background: var(--bkash); }
+.nagad-logo-wrap { background: var(--nagad); }
+.method-logo-text {
+    color: #fff;
+    font-size: 1.2rem;
+    font-weight: 800;
+    letter-spacing: -.5px;
+}
+
+.method-name {
+    font-size: 1.3rem;
+    font-weight: 700;
+    margin-bottom: .3rem;
+}
+.method-desc { color: var(--text-muted); font-size: .9rem; margin-bottom: 1.2rem; }
+.method-select-btn {
+    border-radius: 50px;
+    padding: .5rem 1.4rem;
+    font-weight: 600;
+    font-size: .9rem;
+    color: #fff;
+    display: inline-block;
+    transition: opacity .2s;
+}
+.bkash-btn { background: var(--bkash); }
+.nagad-btn { background: var(--nagad); }
+.method-card:hover .method-select-btn { opacity: .88; }
+
+/* ── Method Header Bar (Step 2) ───────────────────────────── */
+.method-header-bar {
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+    padding: .75rem 1.25rem;
+    border-radius: var(--radius-sm);
+    font-weight: 600;
+}
+.bkash-header-bar { background: var(--bkash-light); border-left: 4px solid var(--bkash); }
+.nagad-header-bar { background: var(--nagad-light); border-left: 4px solid var(--nagad); }
+.method-badge {
+    border-radius: 50px;
+    padding: .25rem .85rem;
+    font-size: .8rem;
+    font-weight: 700;
+    color: #fff;
+}
+.bkash-badge { background: var(--bkash); }
+.nagad-badge { background: var(--nagad); }
+.method-panel-title { font-size: 1rem; color: var(--text); }
+
+/* ── QR Wrapper ───────────────────────────────────────────── */
+.qr-wrapper {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    padding: 1.5rem;
+    box-shadow: var(--shadow);
+    border: 2px solid var(--border);
+}
+.bkash-qr-wrapper { border-color: var(--bkash-light); }
+.nagad-qr-wrapper  { border-color: var(--nagad-light); }
+
+.qr-label {
+    font-size: .8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    color: var(--text-muted);
+    margin-bottom: .75rem;
+}
+.qr-img-main {
+    width: 180px;
+    height: 180px;
+    border-radius: 10px;
+    border: 4px solid #f0f0f0;
+    display: block;
+    margin: 0 auto .75rem;
+}
+.qr-fallback-box {
+    width: 180px;
+    height: 180px;
+    background: #f8f9fa;
+    border-radius: 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto .75rem;
+    color: #ccc;
+}
+
+.agent-number-row {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    justify-content: center;
+    flex-wrap: wrap;
+    padding: .6rem .8rem;
+    border-radius: var(--radius-sm);
+    margin-top: .5rem;
+}
+.bkash-agent-row { background: var(--bkash-light); }
+.nagad-agent-row  { background: var(--nagad-light); }
+.agent-label-sm {
+    font-size: .75rem;
+    font-weight: 600;
+    color: var(--text-muted);
+}
+.agent-num {
+    font-size: 1rem;
+    font-weight: 800;
+    letter-spacing: .03em;
+    color: var(--text);
+}
+.btn-copy-inline {
+    background: none;
+    border: 1px solid currentColor;
+    border-radius: 50px;
+    padding: .15rem .6rem;
+    font-size: .75rem;
+    cursor: pointer;
+    transition: all .2s;
+    color: var(--text-muted);
+}
+.btn-copy-inline:hover { background: rgba(0,0,0,.06); }
+
+/* ── Instructions ─────────────────────────────────────────── */
+.instructions-box {
+    border-radius: var(--radius);
+    padding: 1.5rem;
+    box-shadow: var(--shadow);
+    border: 2px solid transparent;
+}
+.bkash-instructions-box { background: var(--bkash-light); border-color: #f5c6de; }
+.nagad-instructions-box  { background: var(--nagad-light); border-color: #fad9a0; }
+
+.instructions-title {
+    font-size: 1rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+    color: var(--text);
+}
+.instructions-list {
+    padding-left: 1.25rem;
+    margin-bottom: 1rem;
+    color: var(--text);
+}
+.instructions-list li {
+    margin-bottom: .5rem;
+    line-height: 1.55;
+}
+.instructions-note {
+    border-radius: var(--radius-sm);
+    padding: .7rem 1rem;
+    font-size: .875rem;
+    display: flex;
+    gap: .5rem;
+}
+.bkash-note-box { background: rgba(226,19,110,.1); color: var(--bkash-dark); }
+.nagad-note-box  { background: rgba(245,166,35,.15); color: var(--nagad-dark); }
+
+/* ── "I've paid" button ───────────────────────────────────── */
+.cashout-paid-btn {
+    padding: .75rem 2.5rem;
+    border-radius: 50px;
+    font-weight: 700;
+    font-size: 1rem;
+    color: #fff !important;
+    border: none;
+    box-shadow: 0 4px 16px rgba(0,0,0,.15);
+    transition: all .2s;
+}
+.bkash-paid-btn { background: var(--bkash); }
+.nagad-paid-btn { background: var(--nagad); }
+.cashout-paid-btn:hover { opacity: .88; transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,.2); }
+
+/* ── Proof Card (Step 3) ──────────────────────────────────── */
+.proof-card {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    padding: 2rem;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border);
+}
+.proof-card-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding-bottom: 1.25rem;
+    border-bottom: 1px solid var(--border);
+}
+.proof-icon {
+    font-size: 2rem;
+    width: 54px;
+    height: 54px;
+    background: #f0f4ff;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+.proof-title { font-size: 1.2rem; font-weight: 700; color: var(--text); }
+.proof-subtitle { font-size: .875rem; color: var(--text-muted); }
+
+/* ── Selected Method Bar ──────────────────────────────────── */
+.selected-method-bar {
+    display: flex;
+    align-items: center;
+    gap: .6rem;
+    padding: .6rem 1rem;
+    background: #f8f9fa;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+}
+.sm-label { font-size: .8rem; color: var(--text-muted); }
+.sm-badge {
+    border-radius: 50px;
+    padding: .2rem .75rem;
+    font-size: .8rem;
+    font-weight: 700;
+    color: #fff;
+}
+.sm-badge-bkash { background: var(--bkash); }
+.sm-badge-nagad  { background: var(--nagad); }
+.sm-change {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 50px;
+    padding: .15rem .6rem;
+    font-size: .75rem;
+    cursor: pointer;
+    color: var(--text-muted);
+    margin-left: auto;
+    transition: all .2s;
+}
+.sm-change:hover { background: #e9ecef; }
+
+/* ── Form Inputs ──────────────────────────────────────────── */
+.cashout-input {
+    border-radius: var(--radius-sm);
+    border: 1.5px solid var(--border);
+    padding: .65rem .9rem;
+    font-size: .95rem;
+    transition: border-color .2s, box-shadow .2s;
+}
+.cashout-input:focus {
+    border-color: #0f3460;
+    box-shadow: 0 0 0 3px rgba(15,52,96,.12);
+    outline: none;
+}
+.field-hint {
+    font-size: .78rem;
+    color: var(--text-muted);
+    margin-top: .25rem;
+}
+
+/* ── Upload Zone ──────────────────────────────────────────── */
+.upload-zone {
+    border: 2px dashed var(--border);
+    border-radius: var(--radius);
+    padding: 2rem 1rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all .2s;
+    background: #fafbff;
+    position: relative;
+}
+.upload-zone:hover, .upload-zone.dragover {
+    border-color: #0f3460;
+    background: #f0f4ff;
+}
+.upload-input {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+    width: 100%;
+    height: 100%;
+}
+.upload-icon-big { font-size: 2.5rem; margin-bottom: .5rem; }
+.upload-hint-main { font-weight: 600; color: var(--text); margin-bottom: .2rem; font-size: .95rem; }
+.upload-hint-sub  { color: var(--text-muted); font-size: .8rem; margin: 0; }
+
+.upload-preview {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: .5rem;
+}
+.upload-preview img {
+    max-width: 100%;
+    max-height: 220px;
+    border-radius: 10px;
+    box-shadow: var(--shadow);
+    object-fit: contain;
+}
+.preview-info {
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+.preview-name {
+    font-size: .85rem;
+    color: var(--text-muted);
+    word-break: break-all;
+}
+.btn-remove-img {
+    background: #dc3545;
+    color: #fff;
+    border: none;
+    border-radius: 50px;
+    padding: .2rem .7rem;
+    font-size: .78rem;
+    cursor: pointer;
+    position: relative;
+    z-index: 5;
+}
+.btn-remove-img:hover { background: #b02a37; }
+
+/* ── Submit Button ────────────────────────────────────────── */
+.cashout-submit-btn {
+    background: linear-gradient(135deg, #1a1a2e, #0f3460);
+    color: #fff !important;
+    border: none;
+    border-radius: 50px;
+    padding: .8rem 2rem;
+    font-weight: 700;
+    font-size: 1rem;
+    transition: all .2s;
+    box-shadow: 0 4px 16px rgba(15,52,96,.25);
+}
+.cashout-submit-btn:hover:not(:disabled) {
+    opacity: .9;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 24px rgba(15,52,96,.3);
+}
+.cashout-submit-btn:disabled { opacity: .65; cursor: not-allowed; }
+
+/* ── Success Page ─────────────────────────────────────────── */
+.cashout-success-card {
+    max-width: 500px;
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    padding: 3rem 2rem;
+    box-shadow: var(--shadow);
+}
+.success-ring {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    border: 4px solid var(--success);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto;
+    animation: popIn .4s ease;
+}
+.success-check {
+    font-size: 2.2rem;
+    color: var(--success);
+    line-height: 1;
+}
+@keyframes popIn {
+    from { transform: scale(.5); opacity: 0; }
+    to   { transform: scale(1);  opacity: 1; }
+}
+.success-detail-box {
+    background: #f8f9fa;
+    border-radius: var(--radius-sm);
+    padding: 1rem 1.25rem;
+    text-align: left;
+    margin-top: 1.5rem;
+    border: 1px solid var(--border);
+}
+.success-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: .4rem 0;
+    border-bottom: 1px solid var(--border);
+    flex-wrap: wrap;
+    gap: .25rem;
+}
+.success-row:last-child { border-bottom: none; }
+.sd-label { font-size: .82rem; color: var(--text-muted); }
+.sd-val { font-weight: 600; font-size: .9rem; }
+
+.success-info-banner {
+    background: #fff3cd;
+    border: 1px solid #ffc107;
+    border-radius: var(--radius-sm);
+    padding: .75rem 1rem;
+    font-size: .88rem;
+    color: #664d03;
+}
+
+/* ── Utility ──────────────────────────────────────────────── */
+.step-heading {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--text);
+}
+
+@media (max-width: 575px) {
+    .cashout-container { padding-left: 1rem; padding-right: 1rem; }
+    .proof-card { padding: 1.25rem; }
+    .cashout-stepper { gap: 0; }
+    .step-connector { max-width: 40px; }
+    .step-label { font-size: .65rem; }
+    .step-bubble { width: 34px; height: 34px; font-size: .85rem; }
+}

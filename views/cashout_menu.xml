@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- ── Root Menu ──────────────────────────────────────────────── -->
+    <menuitem
+        id="cashout_root_menu"
+        name="Cashout Pro"
+        sequence="70"
+        web_icon="cashout_payment_pro,static/description/icon.png"
+    />
+
+    <!-- ── SMS Logs ───────────────────────────────────────────────── -->
+    <menuitem
+        id="cashout_sms_menu"
+        name="SMS Logs"
+        parent="cashout_root_menu"
+        action="action_cashout_sms_log_dashboard"
+        sequence="10"
+    />
+
+    <!-- ── Transactions ───────────────────────────────────────────── -->
+    <menuitem
+        id="cashout_tx_menu"
+        name="Transactions"
+        parent="cashout_root_menu"
+        action="action_cashout_transactions"
+        sequence="20"
+    />
+
+    <!-- ── Configuration ──────────────────────────────────────────── -->
+    <menuitem
+        id="cashout_config_menu"
+        name="Configuration"
+        parent="cashout_root_menu"
+        sequence="90"
+    />
+    <menuitem
+        id="cashout_provider_menu"
+        name="Payment Provider"
+        parent="cashout_config_menu"
+        action="action_cashout_provider"
+        sequence="10"
+    />
+</odoo>

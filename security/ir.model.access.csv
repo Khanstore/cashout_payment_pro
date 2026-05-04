@@ -1,0 +1,3 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_cashout_sms_log_user,Cashout SMS Log User,model_cashout_sms_log,base.group_user,1,1,1,0
+access_cashout_sms_log_admin,Cashout SMS Log Admin,model_cashout_sms_log,base.group_system,1,1,1,1

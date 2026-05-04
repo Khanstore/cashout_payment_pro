@@ -1,0 +1,169 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- SMS Log List View -->
+    <record id="cashout_sms_log_tree" model="ir.ui.view">
+        <field name="name">cashout.sms.log.list</field>
+        <field name="model">cashout.sms.log</field>
+        <field name="arch" type="xml">
+            <list decoration-success="state == 'matched'"
+                  decoration-warning="state == 'unmatched'"
+                  decoration-muted="state == 'ignored'">
+                <field name="create_date" string="Received"/>
+                <field name="parsed_method"/>
+                <field name="parsed_txn" string="TxID"/>
+                <field name="parsed_amount"/>
+                <field name="parsed_sender" string="Sender"/>
+                <field name="state" widget="badge"
+                       decoration-success="state == 'matched'"
+                       decoration-warning="state == 'unmatched'"
+                       decoration-info="state == 'new'"/>
+                <field name="match_transaction_id" string="Transaction" optional="show"/>
+                <button name="action_retry_match" type="object"
+                        string="Retry" icon="fa-refresh" title="Retry Match"
+                        invisible="[('state', 'in', ['matched', 'ignored'])]"/>
+                <button name="action_ignore" type="object"
+                        string="Ignore" icon="fa-times" title="Ignore"
+                        invisible="[('state', 'in', ['matched', 'ignored'])]"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- SMS Log Form View -->
+    <record id="cashout_sms_log_form" model="ir.ui.view">
+        <field name="name">cashout.sms.log.form</field>
+        <field name="model">cashout.sms.log</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <button name="action_retry_match" type="object"
+                            string="Retry Match" class="btn-primary"
+                            invisible="[('state', 'in', ['matched', 'ignored'])]"/>
+                    <button name="action_ignore" type="object"
+                            string="Ignore" class="btn-secondary"
+                            invisible="[('state', '=', 'ignored')]"/>
+                    <field name="state" widget="statusbar"
+                           statusbar_visible="new,matched,unmatched"/>
+                </header>
+                <sheet>
+                    <group>
+                        <group string="Parsed Data">
+                            <field name="parsed_method"/>
+                            <field name="parsed_txn"/>
+                            <field name="parsed_amount"/>
+                            <field name="parsed_sender"/>
+                        </group>
+                        <group string="Match Status">
+                            <field name="matched" widget="boolean_toggle"/>
+                            <field name="match_transaction_id"/>
+                            <field name="source_number"/>
+                        </group>
+                    </group>
+                    <group string="Raw SMS Text">
+                        <field name="raw_sms" nolabel="1"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- SMS Log Search View -->
+    <record id="cashout_sms_log_search" model="ir.ui.view">
+        <field name="name">cashout.sms.log.search</field>
+        <field name="model">cashout.sms.log</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="parsed_txn" string="Transaction ID"/>
+                <field name="parsed_sender" string="Sender"/>
+                <filter string="Matched" name="matched"
+                        domain="[('matched', '=', True)]"/>
+                <filter string="Unmatched" name="unmatched"
+                        domain="[('state', '=', 'unmatched')]"/>
+                <filter string="New" name="new"
+                        domain="[('state', '=', 'new')]"/>
+                <separator/>
+                <filter string="Bkash" name="bkash"
+                        domain="[('parsed_method', '=', 'bkash')]"/>
+                <filter string="Nagad" name="nagad"
+                        domain="[('parsed_method', '=', 'nagad')]"/>
+                <separator/>
+                <filter string="Today" name="today"
+                        domain="[('create_date', '&gt;=', (context_today()).strftime('%Y-%m-%d'))]"/>
+                <group expand="0" string="Group By">
+                    <filter name="group_method" string="Method"
+                            context="{'group_by': 'parsed_method'}"/>
+                    <filter name="group_state" string="State"
+                            context="{'group_by': 'state'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- Dashboard Kanban View -->
+    <record id="cashout_sms_log_kanban" model="ir.ui.view">
+        <field name="name">cashout.sms.log.kanban</field>
+        <field name="model">cashout.sms.log</field>
+        <field name="arch" type="xml">
+            <kanban default_group_by="state" class="o_kanban_small_column">
+                <field name="state"/>
+                <field name="parsed_method"/>
+                <field name="parsed_txn"/>
+                <field name="parsed_amount"/>
+                <field name="parsed_sender"/>
+                <field name="matched"/>
+                <templates>
+                    <t t-name="kanban-box">
+                        <div class="oe_kanban_global_click">
+                            <div class="o_kanban_record_top">
+                                <strong>
+                                    <t t-if="record.parsed_method.raw_value == 'bkash'">
+                                        <span class="badge" style="background:#E2136E;color:#fff">Bkash</span>
+                                    </t>
+                                    <t t-elif="record.parsed_method.raw_value == 'nagad'">
+                                        <span class="badge" style="background:#F5A623;color:#fff">Nagad</span>
+                                    </t>
+                                    <t t-else="">
+                                        <span class="badge bg-secondary">Unknown</span>
+                                    </t>
+                                    &#160;<t t-esc="record.parsed_txn.value"/>
+                                </strong>
+                            </div>
+                            <div class="o_kanban_record_body">
+                                <p class="mb-1">
+                                    <strong>Amount:</strong>
+                                    <t t-esc="record.parsed_amount.value"/> BDT
+                                </p>
+                                <p class="mb-1">
+                                    <strong>Sender:</strong>
+                                    <t t-esc="record.parsed_sender.value or '—'"/>
+                                </p>
+                            </div>
+                            <div class="o_kanban_record_bottom">
+                                <t t-if="record.matched.raw_value">
+                                    <span class="badge bg-success">&#10003; Matched</span>
+                                </t>
+                                <t t-else="">
+                                    <span class="badge bg-warning">Pending</span>
+                                </t>
+                            </div>
+                        </div>
+                    </t>
+                </templates>
+            </kanban>
+        </field>
+    </record>
+
+    <!-- Action: SMS Log Dashboard -->
+    <record id="action_cashout_sms_log_dashboard" model="ir.actions.act_window">
+        <field name="name">SMS Log Dashboard</field>
+        <field name="res_model">cashout.sms.log</field>
+        <field name="view_mode">list,kanban,form</field>
+        <field name="context">{"search_default_today": 1}</field>
+        <field name="view_ids" eval="[
+            (5, 0, 0),
+            (0, 0, {'view_mode': 'list', 'view_id': ref('cashout_sms_log_tree')}),
+            (0, 0, {'view_mode': 'kanban', 'view_id': ref('cashout_sms_log_kanban')}),
+            (0, 0, {'view_mode': 'form', 'view_id': ref('cashout_sms_log_form')}),
+        ]"/>
+        <field name="search_view_id" ref="cashout_sms_log_search"/>
+    </record>
+</odoo>

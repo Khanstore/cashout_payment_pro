@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ══ noupdate="1" — only written on FRESH install ══════════════════ -->
+    <data noupdate="1">
+
+        <record id="payment_method_cashout_pro" model="payment.method">
+            <field name="name">Cashout (Bkash / Nagad)</field>
+            <field name="code">cashout_pro</field>
+            <field name="sequence">10</field>
+            <field name="active">True</field>
+        </record>
+
+        <record id="payment_provider_cashout_pro" model="payment.provider">
+            <field name="name">Cashout Pro (Bkash / Nagad)</field>
+            <field name="code">cashout_pro</field>
+            <field name="state">enabled</field>
+            <field name="is_published">True</field>
+            <field name="cashout_agent_number">01970569256</field>
+            <field name="cashout_secret_token">CASHOUT_ASHRAF_SECRET_2024</field>
+            <field name="cashout_bkash_instructions">Open bKash app → Cashout → Scan QR or type agent number → Enter exact amount → Confirm with PIN → Note the Transaction ID from your SMS.</field>
+            <field name="cashout_nagad_instructions">Open Nagad app → Cash Out → Scan QR or type agent number → Enter exact amount → Confirm with PIN → Note the Transaction ID from your SMS.</field>
+            <field name="cashout_footer_note">After cashout, upload your transaction screenshot as payment proof. Your order will be confirmed within a few minutes.</field>
+            <field name="pending_msg" type="html">
+                <p>Your cashout payment is being processed. Please complete your Bkash or Nagad cashout to the agent number and upload your screenshot.</p>
+            </field>
+            <field name="done_msg" type="html">
+                <p>&#9989; Your payment has been verified. Thank you!</p>
+            </field>
+            <field name="cancel_msg" type="html">
+                <p>Your payment has been cancelled.</p>
+            </field>
+        </record>
+
+    </data>
+
+    <!-- ══ noupdate="0" — re-applied on EVERY upgrade ════════════════════
+         This block ALWAYS runs, ensuring the method↔provider link exists
+         even on systems that previously had the module without this link.
+    ═══════════════════════════════════════════════════════════════════════ -->
+    <data noupdate="0">
+
+        <!-- Always re-apply on upgrade: method link + redirect form view -->
+        <record id="payment_provider_cashout_pro" model="payment.provider">
+            <field name="payment_method_ids"
+                   eval="[(4, ref('cashout_payment_pro.payment_method_cashout_pro'))]"/>
+            <field name="redirect_form_view_id"
+                   ref="cashout_payment_pro.cashout_pro_redirect_form"/>
+        </record>
+
+    </data>
+
+</odoo>

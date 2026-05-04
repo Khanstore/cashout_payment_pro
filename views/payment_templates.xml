@@ -1,0 +1,461 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- ===== REDIRECT FORM =====
+         MUST have exactly ONE root element — multiple roots cause QWeb to fail
+         silently, making Odoo JS deselect the payment method.
+         Odoo JS finds the <form>, appends it to <body>, then calls .submit().
+         No <script> tags needed — Odoo handles the submit.
+    ===== -->
+    <template id="cashout_pro_redirect_form">
+        <!-- api_url comes from _get_specific_rendering_values; fallback to /cashout/pay
+             prevents a form with empty action from submitting to the current page. -->
+        <form t-att-action="api_url or '/cashout/pay'" method="GET">
+            <input type="hidden" name="ref" t-att-value="reference or ''"/>
+        </form>
+    </template>
+
+    <!-- ===== MAIN PAYMENT PAGE — 3-Step Wizard ===== -->
+    <template id="cashout_payment_page" name="Cashout Payment Page">
+        <t t-call="website.layout">
+            <t t-set="title">Cashout Payment — Bkash / Nagad</t>
+            <div class="cashout-wrap">
+
+                <!-- Banner -->
+                <div class="cashout-banner">
+                    <div class="container py-3 d-flex align-items-center justify-content-between flex-wrap gap-2">
+                        <div>
+                            <h1 class="cashout-title mb-0">&#128274; Secure Cashout Payment</h1>
+                            <p class="cashout-subtitle mb-0">Pay safely via Bkash or Nagad agent cashout</p>
+                        </div>
+                        <t t-if="tx">
+                            <div class="cashout-amount-pill">
+                                <span class="pill-label">Amount Due</span>
+                                <span class="pill-amount">
+                                    <t t-esc="'{:,.2f}'.format(tx.amount)"/> <t t-esc="tx.currency_id.symbol"/>
+                                </span>
+                            </div>
+                        </t>
+                    </div>
+                </div>
+
+                <div class="container cashout-container py-5">
+
+                    <!-- Step Progress -->
+                    <div class="cashout-stepper mb-5">
+                        <div class="cashout-step-item active" id="stepper-1">
+                            <div class="step-bubble">1</div>
+                            <div class="step-label">Choose Method</div>
+                        </div>
+                        <div class="step-connector"></div>
+                        <div class="cashout-step-item" id="stepper-2">
+                            <div class="step-bubble">2</div>
+                            <div class="step-label">Scan &amp; Pay</div>
+                        </div>
+                        <div class="step-connector"></div>
+                        <div class="cashout-step-item" id="stepper-3">
+                            <div class="step-bubble">3</div>
+                            <div class="step-label">Submit Proof</div>
+                        </div>
+                    </div>
+
+                    <!-- Error banner (shown when controller redirects back with error) -->
+                    <t t-if="error">
+                        <div class="alert alert-danger d-flex align-items-center gap-2 mb-4" role="alert">
+                            <span style="font-size:1.3rem;">&#9888;</span>
+                            <div><strong>Error:</strong> <t t-esc="error"/></div>
+                        </div>
+                    </t>
+
+                    <!-- STEP 1: Method Selection -->
+                    <div id="step-1" class="cashout-step-content">
+                        <h2 class="step-heading text-center mb-4">Select your payment method</h2>
+                        <div class="row g-4 justify-content-center">
+                            <div class="col-sm-6 col-lg-4">
+                                <div class="method-card bkash-method" onclick="selectMethod('bkash')" tabindex="0" role="button">
+                                    <div class="method-logo-wrap bkash-logo-wrap">
+                                        <div class="method-logo-text bkash-logo-text">bKash</div>
+                                    </div>
+                                    <h3 class="method-name">bKash</h3>
+                                    <p class="method-desc">Cashout via bKash agent</p>
+                                    <div class="method-select-btn bkash-btn">Select bKash &#8594;</div>
+                                </div>
+                            </div>
+                            <div class="col-sm-6 col-lg-4">
+                                <div class="method-card nagad-method" onclick="selectMethod('nagad')" tabindex="0" role="button">
+                                    <div class="method-logo-wrap nagad-logo-wrap">
+                                        <div class="method-logo-text nagad-logo-text">Nagad</div>
+                                    </div>
+                                    <h3 class="method-name">Nagad</h3>
+                                    <p class="method-desc">Cash Out via Nagad agent</p>
+                                    <div class="method-select-btn nagad-btn">Select Nagad &#8594;</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- STEP 2: QR + Instructions -->
+                    <div id="step-2" class="cashout-step-content d-none">
+
+                        <!-- Bkash Panel -->
+                        <div id="panel-bkash" class="method-panel d-none">
+                            <div class="method-header-bar bkash-header-bar mb-4">
+                                <span class="method-badge bkash-badge">bKash</span>
+                                <span class="method-panel-title">Scan QR Code &amp; Complete Cashout</span>
+                            </div>
+                            <div class="row g-4 align-items-start">
+                                <div class="col-md-5 text-center">
+                                    <div class="qr-wrapper bkash-qr-wrapper">
+                                        <div class="qr-label">Scan with bKash App</div>
+                                        <t t-if="bkash_qr_src">
+                                            <img src="/cashout_payment_pro/static/img/bkash.png"  alt="Bkash QR" class="qr-img-main"/>
+                                        </t>
+                                        <t t-else="">
+                                            <div class="qr-fallback-box">
+                                                <span style="font-size:3rem;">&#9638;</span>
+                                                <p>QR not configured</p>
+                                            </div>
+                                        </t>
+                                        <div class="agent-number-row bkash-agent-row">
+                                            <span class="agent-label-sm">Agent Number</span>
+                                            <strong class="agent-num" id="bkash-agent"><t t-esc="agent_number"/></strong>
+                                            <button class="btn-copy-inline" onclick="copyText('bkash-agent', this)">&#128203; Copy</button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-7">
+                                    <div class="instructions-box bkash-instructions-box">
+                                        <h4 class="instructions-title">&#9654; How to Pay via bKash</h4>
+                                        <ol class="instructions-list">
+                                            <li>Open your <strong>bKash</strong> app</li>
+                                            <li>Tap <strong>Cashout</strong></li>
+                                            <li>Scan the QR code <em>or</em> enter agent: <strong><t t-esc="agent_number"/></strong></li>
+                                            <li>Enter the <strong>exact amount</strong> shown above</li>
+                                            <li>Enter your <strong>PIN</strong> to confirm</li>
+                                            <li>Save the <strong>Transaction ID</strong> from your SMS</li>
+                                        </ol>
+                                        <div class="instructions-note bkash-note-box">
+                                            &#128276; <t t-esc="bkash_instructions"/>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="text-center mt-4">
+                                <button class="btn cashout-paid-btn bkash-paid-btn" onclick="goToStep3()">
+                                    &#10003; I have completed the payment &#8594;
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Nagad Panel -->
+                        <div id="panel-nagad" class="method-panel d-none">
+                            <div class="method-header-bar nagad-header-bar mb-4">
+                                <span class="method-badge nagad-badge">Nagad</span>
+                                <span class="method-panel-title">Scan QR Code &amp; Complete Cash Out</span>
+                            </div>
+                            <div class="row g-4 align-items-start">
+                                <div class="col-md-5 text-center">
+                                    <div class="qr-wrapper nagad-qr-wrapper">
+                                        <div class="qr-label">Scan with Nagad App</div>
+                                        <t t-if="nagad_qr_src">
+                                           <img src="/cashout_payment_pro/static/img/bkash.png" alt="Nagad QR" class="qr-img-main"/>
+                                        </t>
+                                        <t t-else="">
+                                            <div class="qr-fallback-box">
+                                                <span style="font-size:3rem;">&#9638;</span>
+                                                <p>QR not configured</p>
+                                            </div>
+                                        </t>
+                                        <div class="agent-number-row nagad-agent-row">
+                                            <span class="agent-label-sm">Agent Number</span>
+                                            <strong class="agent-num" id="nagad-agent"><t t-esc="agent_number"/></strong>
+                                            <button class="btn-copy-inline" onclick="copyText('nagad-agent', this)">&#128203; Copy</button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-7">
+                                    <div class="instructions-box nagad-instructions-box">
+                                        <h4 class="instructions-title">&#9654; How to Pay via Nagad</h4>
+                                        <ol class="instructions-list">
+                                            <li>Open your <strong>Nagad</strong> app</li>
+                                            <li>Tap <strong>Cash Out</strong></li>
+                                            <li>Scan the QR code <em>or</em> enter agent: <strong><t t-esc="agent_number"/></strong></li>
+                                            <li>Enter the <strong>exact amount</strong> shown above</li>
+                                            <li>Enter your <strong>PIN</strong> to confirm</li>
+                                            <li>Save the <strong>Transaction ID</strong> from your SMS</li>
+                                        </ol>
+                                        <div class="instructions-note nagad-note-box">
+                                            &#128276; <t t-esc="nagad_instructions"/>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="text-center mt-4">
+                                <button class="btn cashout-paid-btn nagad-paid-btn" onclick="goToStep3()">
+                                    &#10003; I have completed the payment &#8594;
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="text-center mt-3">
+                            <button class="btn btn-link text-muted" onclick="goToStep1()">&#8592; Change payment method</button>
+                        </div>
+                    </div>
+
+                    <!-- STEP 3: Submit Proof -->
+                    <div id="step-3" class="cashout-step-content d-none">
+                        <div class="proof-card">
+                            <div class="proof-card-header">
+                                <span class="proof-icon">&#128247;</span>
+                                <div>
+                                    <h3 class="proof-title mb-0">Submit Payment Proof</h3>
+                                    <p class="proof-subtitle mb-0"><t t-esc="footer_note"/></p>
+                                </div>
+                            </div>
+
+                            <form action="/cashout/submit" method="post"
+                                  enctype="multipart/form-data"
+                                  class="cashout-form mt-4"
+                                  id="cashoutSubmitForm">
+                                <input type="hidden" name="ref" t-att-value="ref"/>
+                                <input type="hidden" name="method" id="hiddenMethod" value="bkash"/>
+                                <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+
+                                <div class="selected-method-bar mb-4" id="selectedMethodBar">
+                                    <span class="sm-label">Paying via</span>
+                                    <span class="sm-badge" id="selectedMethodBadge">—</span>
+                                    <button type="button" class="sm-change" onclick="goToStep1()">Change</button>
+                                </div>
+
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label">Transaction ID <span class="text-danger">*</span></label>
+                                        <div class="input-wrap">
+                                            <input type="text" name="txn_id" class="form-control cashout-input"
+                                                   placeholder="e.g. TXN12345678" />
+                                        </div>
+                                        <div class="field-hint">From your Bkash/Nagad confirmation SMS</div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Sending Mobile Number <span class="text-danger">*</span></label>
+                                        <div class="input-wrap">
+                                            <input type="tel" name="sender" class="form-control cashout-input"
+                                                   placeholder="e.g. 01XXXXXXXXX" required="required"/>
+                                        </div>
+                                        <div class="field-hint">The number you paid from</div>
+                                    </div>
+                                    <div class="col-12">
+                                        <label class="form-label">Payment Screenshot <span class="text-danger">*</span></label>
+                                        <div class="upload-zone" id="uploadZone">
+                                            <input type="file" name="screenshot"
+                                                   id="screenshotInput"
+                                                   accept="image/*"
+                                                   class="upload-input"
+                                            />
+                                            <div id="uploadPlaceholder">
+                                                <div class="upload-icon-big">&#128247;</div>
+                                                <p class="upload-hint-main">Click or drag your screenshot here</p>
+                                                <p class="upload-hint-sub">PNG, JPG, JPEG supported</p>
+                                            </div>
+                                            <div id="uploadPreview" class="upload-preview d-none">
+                                                <img id="previewImg" src="" alt="Preview"/>
+                                                <div class="preview-info">
+                                                    <span id="previewName" class="preview-name"></span>
+                                                    <button type="button" class="btn-remove-img" onclick="removeScreenshot(event)">&#10005; Remove</button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-12">
+                                        <label class="form-label">Note (optional)</label>
+                                        <textarea name="note" class="form-control cashout-input" rows="2"
+                                                  placeholder="Any additional information..."></textarea>
+                                    </div>
+                                    <div class="col-12 mt-2">
+                                        <button type="submit" class="btn cashout-submit-btn w-100" id="submitBtn">
+                                            <span class="spinner-border spinner-border-sm d-none me-2" id="submitSpinner"></span>
+                                            &#9989; Confirm &amp; Submit Payment Proof
+                                        </button>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                        <div class="text-center mt-3">
+                            <button class="btn btn-link text-muted" onclick="goToStep2()">&#8592; Back to QR code</button>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <script>
+                var _currentMethod = 'bkash';
+
+                function showStep(n) {
+                    [1, 2, 3].forEach(function(i) {
+                        var el = document.getElementById('step-' + i);
+                        if (el) el.classList.toggle('d-none', i !== n);
+                        var st = document.getElementById('stepper-' + i);
+                        if (st) {
+                            st.classList.toggle('active', i === n);
+                            st.classList.toggle('done', i &lt; n);
+                        }
+                    });
+                    window.scrollTo({top: 0, behavior: 'smooth'});
+                }
+
+                function selectMethod(method) {
+                    _currentMethod = method;
+                    document.getElementById('panel-bkash').classList.toggle('d-none', method !== 'bkash');
+                    document.getElementById('panel-nagad').classList.toggle('d-none', method !== 'nagad');
+                    showStep(2);
+                }
+
+                function goToStep1() { showStep(1); }
+                function goToStep2() { showStep(2); }
+
+                function goToStep3() {
+                    document.getElementById('hiddenMethod').value = _currentMethod;
+                    var badge = document.getElementById('selectedMethodBadge');
+                    badge.textContent = _currentMethod === 'bkash' ? 'bKash' : 'Nagad';
+                    badge.className = 'sm-badge sm-badge-' + _currentMethod;
+                    showStep(3);
+                }
+
+                var screenshotInput = document.getElementById('screenshotInput');
+                screenshotInput.addEventListener('change', function() {
+                    var file = this.files[0];
+                    if (!file) return;
+                    var reader = new FileReader();
+                    reader.onload = function(e) {
+                        document.getElementById('previewImg').src = e.target.result;
+                        document.getElementById('previewName').textContent = file.name;
+                        document.getElementById('uploadPlaceholder').classList.add('d-none');
+                        document.getElementById('uploadPreview').classList.remove('d-none');
+                    };
+                    reader.readAsDataURL(file);
+                });
+
+                function removeScreenshot(e) {
+                    e.stopPropagation();
+                    screenshotInput.value = '';
+                    document.getElementById('uploadPlaceholder').classList.remove('d-none');
+                    document.getElementById('uploadPreview').classList.add('d-none');
+                }
+
+                var zone = document.getElementById('uploadZone');
+                zone.addEventListener('dragover', function(e) { e.preventDefault(); zone.classList.add('dragover'); });
+                zone.addEventListener('dragleave', function() { zone.classList.remove('dragover'); });
+                zone.addEventListener('drop', function(e) {
+                    e.preventDefault(); zone.classList.remove('dragover');
+                    var f = e.dataTransfer.files[0];
+                    if (f) {
+                        var dt = new DataTransfer(); dt.items.add(f);
+                        screenshotInput.files = dt.files;
+                        screenshotInput.dispatchEvent(new Event('change'));
+                    }
+                });
+                zone.addEventListener('click', function(e) {
+                    if (!e.target.classList.contains('btn-remove-img')) screenshotInput.click();
+                });
+
+                function copyText(elementId, btn) {
+                    var text = document.getElementById(elementId).textContent.trim();
+                    navigator.clipboard.writeText(text).then(function() {
+                        btn.textContent = '✓ Copied!';
+                        setTimeout(function() { btn.textContent = '📋 Copy'; }, 2000);
+                    });
+                }
+
+                document.getElementById('cashoutSubmitForm').addEventListener('submit', function(e) {
+                    var txnId = this.querySelector('[name="txn_id"]').value.trim();
+                    var sender = this.querySelector('[name="sender"]').value.trim();
+                    var screenshot = screenshotInput.files.length;
+                    if (!txnId || !sender || !screenshot) {
+                        e.preventDefault();
+                        alert('Please fill in Transaction ID, Mobile Number, and upload a screenshot.');
+                        return;
+                    }
+                    document.getElementById('submitSpinner').classList.remove('d-none');
+                    document.getElementById('submitBtn').disabled = true;
+                });
+
+                document.querySelectorAll('.method-card').forEach(function(card) {
+                    card.addEventListener('keydown', function(e) {
+                        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); card.click(); }
+                    });
+                });
+            </script>
+        </t>
+    </template>
+
+    <!-- ===== SUCCESS PAGE ===== -->
+    <template id="cashout_success_page" name="Cashout Success Page">
+        <t t-call="website.layout">
+            <t t-set="title">Payment Submitted</t>
+            <div class="cashout-wrap">
+                <div class="container py-5">
+                    <div class="cashout-success-card mx-auto text-center">
+                        <div class="success-ring">
+                            <div class="success-check">&#10003;</div>
+                        </div>
+                        <h2 class="mt-4">Payment Proof Submitted!</h2>
+                        <p class="lead text-muted">Our team will verify your payment and confirm your order shortly.</p>
+
+                        <div class="success-detail-box">
+                            <div class="success-row">
+                                <span class="sd-label">Payment Method</span>
+                                <span class="sd-val">
+                                    <t t-if="method == 'bkash'">
+                                        <span style="background:#E2136E;color:#fff;border-radius:50px;padding:.15rem .7rem;font-weight:700;font-size:.85rem;">bKash</span>
+                                    </t>
+                                    <t t-else="">
+                                        <span style="background:#F5A623;color:#fff;border-radius:50px;padding:.15rem .7rem;font-weight:700;font-size:.85rem;">Nagad</span>
+                                    </t>
+                                </span>
+                            </div>
+                            <t t-if="txn_id">
+                                <div class="success-row">
+                                    <span class="sd-label">Transaction ID</span>
+                                    <span class="sd-val"><code><t t-esc="txn_id"/></code></span>
+                                </div>
+                            </t>
+                            <div class="success-row">
+                                <span class="sd-label">Order Reference</span>
+                                <span class="sd-val"><code><t t-esc="ref"/></code></span>
+                            </div>
+                        </div>
+
+                        <div class="success-info-banner mt-4">
+                            &#8987; Your order will be confirmed once our team verifies the transaction.
+                            You will receive an email confirmation.
+                        </div>
+
+                        <div class="d-flex gap-3 justify-content-center mt-4 flex-wrap">
+                            <a href="/my/orders" class="btn cashout-submit-btn">&#128220; View My Orders</a>
+                            <a href="/shop" class="btn btn-outline-secondary">&#128722; Continue Shopping</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </t>
+    </template>
+
+    <!-- ===== ERROR PAGE ===== -->
+    <template id="cashout_error_page" name="Cashout Error Page">
+        <t t-call="website.layout">
+            <t t-set="title">Payment Error</t>
+            <div class="cashout-wrap">
+                <div class="container py-5">
+                    <div class="cashout-success-card mx-auto text-center">
+                        <div class="success-ring" style="border-color:#dc3545;">
+                            <div class="success-check" style="color:#dc3545;">&#10005;</div>
+                        </div>
+                        <h2 class="mt-4">Configuration Error</h2>
+                        <p class="lead text-muted"><t t-esc="error"/></p>
+                        <a href="/" class="btn btn-outline-secondary mt-3">&#8592; Go Home</a>
+                    </div>
+                </div>
+            </div>
+        </t>
+    </template>
+</odoo>

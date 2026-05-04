@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- ── Provider Form View (extends base) ───────────────────────────────── -->
+    <record id="payment_provider_form_cashout" model="ir.ui.view">
+        <field name="name">payment.provider.form.cashout</field>
+        <field name="model">payment.provider</field>
+        <field name="inherit_id" ref="payment.payment_provider_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//page[@name='configuration']" position="after">
+                <page name="cashout_config" string="Cashout Settings"
+                      invisible="[('code', '!=', 'cashout_pro')]">
+                    <group>
+                        <group string="Agent Configuration">
+                            <field name="cashout_agent_number" required="1"/>
+                            <field name="cashout_secret_token"/>
+                        </group>
+                        <group string="QR Codes (Auto-Generated)">
+                            <field name="cashout_bkash_qr" widget="image"
+                                   options='{"size": [200, 200]}'
+                                   string="Bkash QR"/>
+                            <field name="cashout_nagad_qr" widget="image"
+                                   options='{"size": [200, 200]}'
+                                   string="Nagad QR"/>
+                        </group>
+                    </group>
+                    <group string="Customer Instructions">
+                        <field name="cashout_bkash_instructions" nolabel="1"
+                               placeholder="Bkash cashout instructions shown to customer..."/>
+                        <field name="cashout_nagad_instructions" nolabel="1"
+                               placeholder="Nagad cashout instructions shown to customer..."/>
+                        <field name="cashout_footer_note"/>
+                    </group>
+                </page>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- ── Provider Action ─────────────────────────────────────────────────── -->
+    <record id="action_cashout_provider" model="ir.actions.act_window">
+        <field name="name">Cashout Provider</field>
+        <field name="res_model">payment.provider</field>
+        <field name="view_mode">form</field>
+        <field name="domain">[('code', '=', 'cashout_pro')]</field>
+        <field name="res_id" ref="payment_provider_cashout_pro"/>
+    </record>
+</odoo>
