@@ -82,11 +82,7 @@ class CashoutController(http.Controller):
         if method not in ('bkash', 'nagad'):
             method = 'bkash'
 
-        # ── Validate required fields ───────────────────────────────────────────
-        if not txn_id or not sender:
-            return self._reload_pay_page(ref, 'Please fill in all required fields.')
-
-        # ── Screenshot upload ──────────────────────────────────────────────────
+        # ── Screenshot upload (read before validation so rules can check it) ────
         screenshot_b64  = False
         screenshot_name = False
         upload = request.httprequest.files.get('screenshot')
@@ -96,6 +92,12 @@ class CashoutController(http.Controller):
                 screenshot_b64  = base64.b64encode(data)
                 screenshot_name = upload.filename
 
+        # ── Validate fields ────────────────────────────────────────────────────
+        # Rule 1: Sender is always required.
+        # Rule 2: Screenshot is always required.
+        # Rule 3: Transaction ID is optional when a screenshot is provided.
+        if not sender:
+            return self._reload_pay_page(ref, 'Please enter your sending mobile number.')
         if not screenshot_b64:
             return self._reload_pay_page(ref, 'Please upload a screenshot of your payment.')
 

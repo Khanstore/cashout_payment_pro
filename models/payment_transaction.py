@@ -173,32 +173,53 @@ class PaymentTransaction(models.Model):
                 except Exception as e:
                     _logger.warning('Cashout: _set_pending for %s: %s', rec.reference, e)
 
-            # _set_done() → state='done' → _execute_callback() → confirms SO
+            # ── 1. Transition Odoo payment state to done ─────────────────
+            # _set_done() calls _execute_callback(), but in Odoo 18 that
+            # callback is silently skipped when is_post_processed=True (set
+            # during the original checkout redirect). We therefore ALWAYS
+            # confirm the sale order explicitly below — never rely on the
+            # callback alone.
             try:
                 rec._set_done()
             except Exception as e:
-                _logger.warning(
-                    'Cashout: _set_done raised for %s: %s — trying direct SO confirm',
-                    rec.reference, e,
-                )
-                rec._cashout_confirm_sale_order()
+                _logger.warning('Cashout: _set_done raised for %s: %s', rec.reference, e)
+
+            # ── 2. Mark as post-processed to block the cron ──────────────
+            # _set_done() leaves is_post_processed=False, which causes
+            # _cron_post_process to call _create_payment() — and that fails
+            # with "Please define a payment method line" because the provider
+            # journal may not have one configured.  We handle the full
+            # accounting flow ourselves below, so we block the cron here.
+            try:
+                rec.sudo().write({'is_post_processed': True})
+            except Exception:
+                pass  # field may not exist in all builds — safe to ignore
+
+            # ── 3. Full accounting flow (SO confirm → invoice → payment) ─────
+            # Do NOT wrap in try/except — UserError must reach the UI so the
+            # admin sees exactly what failed instead of a silent no-op.
+            rec._cashout_confirm_sale_order()
 
             method_label = dict(
                 rec._fields['cashout_method'].selection
             ).get(rec.cashout_method, rec.cashout_method or '—')
 
-            rec.message_post(
-                body=(
-                    f'<p>&#9989; <b>Cashout confirmed</b> by {self.env.user.name}.</p>'
-                    f'<ul>'
-                    f'<li>Method: <b>{method_label}</b></li>'
-                    f'<li>Txn ID: <b>{rec.cashout_txn_id or "—"}</b></li>'
-                    f'<li>Sender: <b>{rec.cashout_sender or "—"}</b></li>'
-                    f'<li>Confirmed on: <b>{rec.cashout_confirmed_date}</b></li>'
-                    f'</ul>'
-                ),
-                message_type='notification',
-            )
+            if hasattr(rec, 'message_post'):
+                rec.message_post(
+                    body=(
+                        f'<p>&#9989; <b>Cashout confirmed</b> by {self.env.user.name}.</p>'
+                        f'<ul>'
+                        f'<li>Method: <b>{method_label}</b></li>'
+                        f'<li>Txn ID: <b>{rec.cashout_txn_id or "—"}</b></li>'
+                        f'<li>Sender: <b>{rec.cashout_sender or "—"}</b></li>'
+                        f'<li>Confirmed on: <b>{rec.cashout_confirmed_date}</b></li>'
+                        f'</ul>'
+                    ),
+                    message_type='notification',
+                )
+            else:
+                _logger.info('Cashout: confirmed %s by %s (chatter unavailable)',
+                             rec.reference, self.env.user.name)
             rec._cashout_send_confirmation_email()
 
         return {
@@ -206,7 +227,10 @@ class PaymentTransaction(models.Model):
             'tag': 'display_notification',
             'params': {
                 'title': '✅ Payment Confirmed',
-                'message': f'{rec.reference} confirmed. Order updated.',
+                'message': (
+                    f'{rec.reference} — '
+                    'Quotation confirmed · Invoice created & validated · Invoice marked paid.'
+                ),
                 'type': 'success',
                 'sticky': False,
             },
@@ -225,10 +249,14 @@ class PaymentTransaction(models.Model):
                     rec._set_canceled(state_message='Rejected by admin.')
                 except Exception as e:
                     _logger.warning('Cashout: _set_canceled for %s: %s', rec.reference, e)
-            rec.message_post(
-                body=f'<p>&#10060; <b>Rejected</b> by {self.env.user.name}.</p>',
-                message_type='notification',
-            )
+            if hasattr(rec, 'message_post'):
+                rec.message_post(
+                    body=f'<p>&#10060; <b>Rejected</b> by {self.env.user.name}.</p>',
+                    message_type='notification',
+                )
+            else:
+                _logger.info('Cashout: rejected %s by %s (chatter unavailable)',
+                             rec.reference, self.env.user.name)
 
         return {
             'type': 'ir.actions.client',
@@ -250,23 +278,140 @@ class PaymentTransaction(models.Model):
     # ── Sale Order Confirmation (fallback) ────────────────────────────────────
     def _cashout_confirm_sale_order(self):
         """
-        Directly confirm the linked sale order when _set_done() fails.
-        Works by finding the sale.order linked to this transaction.
+        Confirm quotation → create & validate invoice → register payment.
+        Raises UserError with a clear message so the admin sees any failure
+        instead of it being swallowed silently.
         """
+        from odoo.exceptions import UserError
+
         self.ensure_one()
+        # env.get() returns an empty recordset when the model exists —
+        # empty recordsets are falsy in Odoo, so we MUST check `is None`.
         SaleOrder = self.env.get('sale.order')
-        if not SaleOrder:
-            return
-        orders = SaleOrder.sudo().search([
-            ('transaction_ids', 'in', [self.id]),
-        ])
+        if SaleOrder is None:
+            raise UserError('Sales module is not installed. Cannot confirm order.')
+
+        # ── Find the linked sale order (three attempts) ────────────────────────
+        # Attempt A: direct Many2many field added by sale module
+        orders = SaleOrder
+        if hasattr(self, 'sale_order_ids') and self.sale_order_ids:
+            orders = self.sale_order_ids.sudo()
+
+        # Attempt B: reverse Many2many search
+        if not orders:
+            orders = SaleOrder.sudo().search([
+                ('transaction_ids', 'in', [self.id])
+            ])
+
+        # Attempt C: parse transaction reference (e.g. "S04055-1" → "S04055")
+        if not orders and self.reference:
+            so_name = self.reference.rsplit('-', 1)[0]
+            orders = SaleOrder.sudo().search([('name', '=', so_name)])
+            if not orders:
+                # try the full reference as the order name
+                orders = SaleOrder.sudo().search([('name', '=', self.reference)])
+
+        if not orders:
+            raise UserError(
+                f'No sale order found for transaction {self.reference}.\n'
+                f'Checked: sale_order_ids field, transaction_ids search, and order name match.'
+            )
+
         for order in orders:
+            _logger.info('Cashout: processing SO %s (state=%s)', order.name, order.state)
+
+            # ── 1. Confirm quotation ───────────────────────────────────────────
             if order.state in ('draft', 'sent'):
-                try:
-                    order.action_confirm()
-                    _logger.info('Cashout: directly confirmed SO %s', order.name)
-                except Exception as e:
-                    _logger.error('Cashout: SO confirm failed for %s: %s', order.name, e)
+                order.sudo().action_confirm()
+                _logger.info('Cashout: SO %s confirmed', order.name)
+            elif order.state not in ('sale', 'done'):
+                raise UserError(
+                    f'Sale order {order.name} is in state "{order.state}" '
+                    f'and cannot be confirmed.'
+                )
+
+            # ── 2. Create invoice ──────────────────────────────────────────────
+            if order.invoice_status == 'invoiced':
+                _logger.info('Cashout: SO %s already fully invoiced', order.name)
+                invoices = order.invoice_ids.sudo().filtered(
+                    lambda inv: inv.move_type == 'out_invoice'
+                    and inv.state == 'posted'
+                    and inv.payment_state in ('not_paid', 'partial')
+                )
+            else:
+                invoices = order.sudo()._create_invoices()
+                if not invoices:
+                    raise UserError(
+                        f'Invoice creation returned nothing for order {order.name}.\n'
+                        f'Check that the order lines have an invoiceable policy (Ordered/Delivered Qty).'
+                    )
+                _logger.info('Cashout: created %s invoice(s) for SO %s', len(invoices), order.name)
+
+            for invoice in invoices.sudo():
+                # ── 3. Validate invoice ────────────────────────────────────────
+                if invoice.state == 'draft':
+                    invoice.action_post()
+                    _logger.info('Cashout: posted invoice %s', invoice.name)
+
+                if invoice.payment_state in ('paid', 'in_payment'):
+                    _logger.info('Cashout: invoice %s already paid', invoice.name)
+                    continue
+
+                # ── 4. Find journal ────────────────────────────────────────────
+                journal = None
+                if hasattr(self.provider_id, 'journal_id') and self.provider_id.journal_id:
+                    journal = self.provider_id.journal_id
+                if not journal:
+                    journal = self.env['account.journal'].sudo().search([
+                        ('type', 'in', ['bank', 'cash']),
+                        ('company_id', '=', invoice.company_id.id),
+                    ], limit=1)
+                if not journal:
+                    raise UserError(
+                        f'No bank or cash journal found for company "{invoice.company_id.name}".\n'
+                        f'Go to Accounting → Configuration → Journals and create one,\n'
+                        f'then set it on the Cashout Pro provider under Configuration.'
+                    )
+
+                pay_method_line = journal.inbound_payment_method_line_ids[:1]
+                if not pay_method_line:
+                    raise UserError(
+                        f'Journal "{journal.name}" has no inbound payment methods.\n'
+                        f'Go to Accounting → Configuration → Journals → {journal.name}\n'
+                        f'→ Configuration tab → add "Manual" under Inbound Payment Methods.'
+                    )
+
+                # ── 5. Register payment (same as UI "Register Payment" button) ─
+                method_label = dict(
+                    self._fields['cashout_method'].selection
+                ).get(self.cashout_method, self.cashout_method or '')
+
+                wizard = self.env['account.payment.register'].sudo().with_context(
+                    active_model='account.move',
+                    active_ids=invoice.ids,
+                ).create({
+                    'payment_date':           fields.Date.today(),
+                    'journal_id':             journal.id,
+                    'payment_method_line_id': pay_method_line.id,
+                    'amount':                 invoice.amount_residual,
+                    'currency_id':            invoice.currency_id.id,
+                    'communication':          (
+                        f'Cashout Pro | {method_label} | '
+                        f'Txn: {self.cashout_txn_id or "—"} | {self.reference}'
+                    ),
+                })
+                wizard.action_create_payments()
+                _logger.info('Cashout: payment registered for invoice %s', invoice.name)
+
+    def _cashout_chatter(self, body):
+        """Post a chatter message if mail.thread is available."""
+        try:
+            if hasattr(self, 'message_post'):
+                self.message_post(body=body, message_type='notification')
+            else:
+                _logger.info('Cashout chatter: %s', body)
+        except Exception:
+            _logger.info('Cashout chatter (fallback): %s', body)
 
     # ── Email Notifications ────────────────────────────────────────────────────
     def _cashout_notify_admin(self):

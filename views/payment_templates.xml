@@ -322,6 +322,15 @@
                 }
 
                 var screenshotInput = document.getElementById('screenshotInput');
+
+                // Prevent double file-dialog: the input is inside uploadZone.
+                // Without stopPropagation, a click on the input fires the input's
+                // native dialog AND bubbles up to the zone handler which calls
+                // screenshotInput.click() a second time → two dialogs open.
+                screenshotInput.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                });
+
                 screenshotInput.addEventListener('change', function() {
                     var file = this.files[0];
                     if (!file) return;
@@ -367,14 +376,23 @@
                 }
 
                 document.getElementById('cashoutSubmitForm').addEventListener('submit', function(e) {
-                    var txnId = this.querySelector('[name="txn_id"]').value.trim();
-                    var sender = this.querySelector('[name="sender"]').value.trim();
-                    var screenshot = screenshotInput.files.length;
-                    if (!txnId || !sender || !screenshot) {
+                    var sender  = this.querySelector('[name="sender"]').value.trim();
+                    var hasShot = screenshotInput.files.length > 0;
+
+                    // Rule 1: Sender is always mandatory.
+                    if (!sender) {
                         e.preventDefault();
-                        alert('Please fill in Transaction ID, Mobile Number, and upload a screenshot.');
+                        alert('Please enter your sending mobile number.');
                         return;
                     }
+                    // Rule 2: Screenshot is always mandatory.
+                    if (!hasShot) {
+                        e.preventDefault();
+                        alert('Please upload a screenshot of your payment.');
+                        return;
+                    }
+                    // Rule 3: Transaction ID is optional when screenshot is provided.
+
                     document.getElementById('submitSpinner').classList.remove('d-none');
                     document.getElementById('submitBtn').disabled = true;
                 });

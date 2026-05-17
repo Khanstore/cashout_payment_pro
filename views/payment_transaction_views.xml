@@ -27,10 +27,10 @@
                 <field name="state" optional="show"/>
                 <button name="action_cashout_confirm" type="object"
                         string="✅ Confirm" class="btn-sm btn-success"
-                        />
+                        invisible="cashout_status in ('confirmed', 'rejected')"/>
                 <button name="action_cashout_reject" type="object"
                         string="❌ Reject" class="btn-sm btn-danger"
-                        />
+                        invisible="cashout_status in ('confirmed', 'rejected')"/>
             </list>
         </field>
     </record>
@@ -77,74 +77,83 @@
     </record>
 
     <!-- ── Form View ──────────────────────────────────────────────────────── -->
-    <!--
-        priority="1" makes Odoo prefer this view over the default payment form
-        (default priority is 16). Confirm/Reject buttons and cashout fields
-        carry invisible="provider_code != 'cashout_pro'" so they stay hidden
-        for all other payment providers.
-    -->
     <record id="payment_transaction_form_cashout" model="ir.ui.view">
         <field name="name">payment.transaction.form.cashout</field>
         <field name="model">payment.transaction</field>
-        <field name="priority">1</field>
         <field name="arch" type="xml">
             <form>
                 <header>
+                    <!-- Sentinel: ensures cashout_status value is always sent
+                         to the client so header button invisible expressions
+                         evaluate correctly even if the field moves in the sheet. -->
+                    <field name="cashout_status" invisible="1"/>
                     <button name="action_cashout_confirm" type="object"
                             string="✅ Confirm Payment"
                             class="btn-success"
-                            invisible="['|',
-                                ('provider_code', '!=', 'cashout_pro'),
-                                ('cashout_status', 'in', ['confirmed', 'rejected'])
-                            ]"/>
+                            invisible="cashout_status in ('confirmed', 'rejected')"/>
                     <button name="action_cashout_reject" type="object"
                             string="❌ Reject"
                             class="btn-danger"
-                            invisible="['|',
-                                ('provider_code', '!=', 'cashout_pro'),
-                                ('cashout_status', 'in', ['confirmed', 'rejected'])
-                            ]"/>
+                            invisible="cashout_status in ('confirmed', 'rejected')"/>
                     <button name="action_view_screenshot" type="object"
                             string="🖼 View Screenshot"
                             class="btn-secondary"
-                            invisible="['|',
-                                ('provider_code', '!=', 'cashout_pro'),
-                                ('cashout_screenshot', '=', False)
-                            ]"/>
+                            invisible="not cashout_screenshot"/>
                     <field name="state" widget="statusbar"
                            statusbar_visible="pending,authorized,done,cancel"/>
                 </header>
                 <sheet>
+                    <!-- Inline action banner for screenshot_uploaded - buttons
+                         duplicated here so confirm/reject is ALWAYS reachable
+                         regardless of header button rendering issues -->
                     <div class="alert alert-warning d-flex align-items-center gap-2 mb-3"
                          role="alert"
-                         invisible="[('cashout_status', '!=', 'screenshot_uploaded')]">
-                        <span style="font-size:1.4rem;">⏳</span>
+                         invisible="cashout_status != 'screenshot_uploaded'">
+                        <span style="font-size:1.4rem;">&#9203;</span>
                         <div>
                             <strong>Proof Uploaded — Action Required</strong><br/>
-                            Customer has submitted their screenshot.
-                            Please review and <strong>Confirm</strong> or <strong>Reject</strong>.
+                            Customer has submitted their screenshot. Review and confirm or reject.
+                        </div>
+                        <div class="ms-auto d-flex gap-2">
+                            <button name="action_cashout_confirm" type="object"
+                                    string="✅ Confirm Payment"
+                                    class="btn btn-success btn-sm"/>
+                            <button name="action_cashout_reject" type="object"
+                                    string="❌ Reject"
+                                    class="btn btn-danger btn-sm"/>
                         </div>
                     </div>
+
                     <div class="alert alert-info d-flex align-items-center gap-2 mb-3"
                          role="alert"
-                         invisible="[('cashout_status', '!=', 'sms_matched')]">
-                        <span style="font-size:1.4rem;">📡</span>
+                         invisible="cashout_status != 'sms_matched'">
+                        <span style="font-size:1.4rem;">&#128225;</span>
                         <div>
-                            <strong>SMS Auto-Matched</strong> — Transaction was verified via SMS relay.
-                            Click <strong>Confirm Payment</strong> to finalise the order.
+                            <strong>SMS Auto-Matched</strong> — Verified via SMS relay.
+                            Click Confirm to finalise the order.
+                        </div>
+                        <div class="ms-auto d-flex gap-2">
+                            <button name="action_cashout_confirm" type="object"
+                                    string="✅ Confirm Payment"
+                                    class="btn btn-success btn-sm"/>
+                            <button name="action_cashout_reject" type="object"
+                                    string="❌ Reject"
+                                    class="btn btn-danger btn-sm"/>
                         </div>
                     </div>
+
                     <div class="alert alert-success d-flex align-items-center gap-2 mb-3"
                          role="alert"
-                         invisible="[('cashout_status', '!=', 'confirmed')]">
-                        <span style="font-size:1.4rem;">✅</span>
-                        <div><strong>Payment Confirmed</strong> — Order has been updated.</div>
+                         invisible="cashout_status != 'confirmed'">
+                        <span style="font-size:1.4rem;">&#9989;</span>
+                        <strong>Payment Confirmed</strong> — Order has been updated.
                     </div>
+
                     <div class="alert alert-danger d-flex align-items-center gap-2 mb-3"
                          role="alert"
-                         invisible="[('cashout_status', '!=', 'rejected')]">
-                        <span style="font-size:1.4rem;">❌</span>
-                        <div><strong>Payment Rejected</strong> — Transaction cancelled.</div>
+                         invisible="cashout_status != 'rejected'">
+                        <span style="font-size:1.4rem;">&#10060;</span>
+                        <strong>Payment Rejected</strong> — Transaction cancelled.
                     </div>
 
                     <div class="oe_title">
@@ -159,8 +168,7 @@
                             <field name="provider_id"/>
                             <field name="create_date" string="Submitted On"/>
                         </group>
-                        <group string="Cashout Details"
-                               invisible="[('provider_code', '!=', 'cashout_pro')]">
+                        <group string="Cashout Details">
                             <field name="cashout_method"/>
                             <field name="cashout_status" widget="badge"
                                    decoration-success="cashout_status == 'confirmed'"
@@ -172,29 +180,27 @@
                             <field name="cashout_verified" widget="boolean_toggle"/>
                             <field name="cashout_verified_by" readonly="1"/>
                             <field name="cashout_confirmed_date" readonly="1"
-                                   invisible="[('cashout_confirmed_date', '=', False)]"/>
+                                   invisible="not cashout_confirmed_date"/>
                             <field name="sms_log_id"
-                                   invisible="[('sms_log_id', '=', False)]"/>
+                                   invisible="not sms_log_id"/>
                         </group>
                     </group>
 
-                    <notebook invisible="[('provider_code', '!=', 'cashout_pro')]">
-                        <page string="📸 Payment Screenshot" name="screenshot">
-                            <div invisible="[('cashout_screenshot', '!=', False)]"
-                                 class="text-muted p-3">
+                    <notebook>
+                        <page string="&#128247; Payment Screenshot" name="screenshot">
+                            <div invisible="cashout_screenshot" class="text-muted p-3">
                                 No screenshot uploaded yet.
                             </div>
-                            <div invisible="[('cashout_screenshot', '=', False)]">
+                            <div invisible="not cashout_screenshot">
                                 <field name="cashout_screenshot" widget="image"
-                                       options='{"size": [700, 500]}'
-                                       nolabel="1"/>
+                                       options='{"size": [700, 500]}' nolabel="1"/>
                                 <div class="mt-2">
                                     <field name="cashout_screenshot_name" readonly="1"
                                            string="Filename"/>
                                 </div>
                             </div>
                         </page>
-                        <page string="💬 Customer Note" name="note">
+                        <page string="&#128172; Customer Note" name="note">
                             <field name="cashout_customer_note" nolabel="1" readonly="1"/>
                         </page>
                     </notebook>
@@ -209,7 +215,7 @@
         <field name="name">Cashout Transactions</field>
         <field name="res_model">payment.transaction</field>
         <field name="view_mode">list,form</field>
-        <field name="domain">[('provider_code', '=', 'cashout_pro')]</field>
+        <field name="domain">[]</field>
         <field name="context">{"search_default_pending_review": 1}</field>
         <field name="view_ids" eval="[
             (5, 0, 0),

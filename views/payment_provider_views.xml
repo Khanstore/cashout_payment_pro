@@ -23,6 +23,13 @@
                                    string="Nagad QR"/>
                         </group>
                     </group>
+                    <group string="Accounting">
+                        <group>
+                            <field name="journal_id"
+                                   domain="[('type', 'in', ['bank','cash']), ('company_id', '=', company_id)]"
+                                   help="Journal used to post customer payments when a cashout transaction is confirmed. Must have at least one Inbound Payment Method configured."/>
+                        </group>
+                    </group>
                     <group string="Customer Instructions">
                         <field name="cashout_bkash_instructions" nolabel="1"
                                placeholder="Bkash cashout instructions shown to customer..."/>
