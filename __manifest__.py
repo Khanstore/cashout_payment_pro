@@ -1,7 +1,7 @@
 {
-    'name': 'Cashout Payment Pro — Bkash & Nagad',
+    'name': 'Cashout Payment Pro',
     'version': '18.0.11.0.0',
-    'summary': 'Bkash/Nagad Cashout — checkout selection, 3-step wizard, QR, screenshot, admin confirm',
+    'summary': 'Cashout/Pament from any MFS/Banking app,checkout selection, 3-step wizard, QR, screenshot, admin confirm manually',
     'description': '''
 Cashout Payment Pro v7 — Full-featured mobile banking payment for Odoo 18.
 
