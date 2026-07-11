@@ -6,7 +6,7 @@ class PaymentProvider(models.Model):
     _inherit = 'payment.provider'
 
     code = fields.Selection(
-        selection_add=[('cashout_pro', 'Cashout Pro (Bkash/Nagad)')],
+        selection_add=[('cashout_pro', 'Cashout Pro ')],
         ondelete={'cashout_pro': 'set default'},
     )
 
