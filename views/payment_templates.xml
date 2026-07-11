@@ -228,7 +228,7 @@
 
                                 <div class="row g-3">
                                     <div class="col-md-6">
-                                        <label class="form-label">Transaction ID <span class="text-danger">*</span></label>
+                                        <label class="form-label">Transaction ID (optional)</label>
                                         <div class="input-wrap">
                                             <input type="text" name="txn_id" class="form-control cashout-input"
                                                    placeholder="e.g. TXN12345678" />
@@ -236,15 +236,15 @@
                                         <div class="field-hint">From your Bkash/Nagad confirmation SMS</div>
                                     </div>
                                     <div class="col-md-6">
-                                        <label class="form-label">Sending Mobile Number <span class="text-danger">*</span></label>
+                                        <label class="form-label">Sending Mobile Number (optional)</label>
                                         <div class="input-wrap">
                                             <input type="tel" name="sender" class="form-control cashout-input"
-                                                   placeholder="e.g. 01XXXXXXXXX" required="required"/>
+                                                   placeholder="e.g. 01XXXXXXXXX"/>
                                         </div>
                                         <div class="field-hint">The number you paid from</div>
                                     </div>
                                     <div class="col-12">
-                                        <label class="form-label">Payment Screenshot <span class="text-danger">*</span></label>
+                                        <label class="form-label">Payment Screenshot (optional)</label>
                                         <div class="upload-zone" id="uploadZone">
                                             <input type="file" name="screenshot"
                                                    id="screenshotInput"
@@ -264,6 +264,12 @@
                                                 </div>
                                             </div>
                                         </div>
+                                    </div>
+                                    <div class="col-12">
+                                        <label class="form-label">Confirmation SMS (optional)</label>
+                                        <textarea name="sms_text" class="form-control cashout-input" rows="2"
+                                                  placeholder="Paste the full bKash/Nagad confirmation SMS text here..."></textarea>
+                                        <div class="field-hint">Pasting the raw SMS can help us verify your payment faster</div>
                                     </div>
                                     <div class="col-12">
                                         <label class="form-label">Note (optional)</label>
@@ -376,22 +382,19 @@
                 }
 
                 document.getElementById('cashoutSubmitForm').addEventListener('submit', function(e) {
-                    var sender  = this.querySelector('[name="sender"]').value.trim();
-                    var hasShot = screenshotInput.files.length > 0;
+                    var txnId    = this.querySelector('[name="txn_id"]').value.trim();
+                    var sender   = this.querySelector('[name="sender"]').value.trim();
+                    var smsText  = this.querySelector('[name="sms_text"]').value.trim();
+                    var hasShot  = screenshotInput.files.length > 0;
 
-                    // Rule 1: Sender is always mandatory.
-                    if (!sender) {
+                    // Each proof field is individually optional, but at least
+                    // one of Transaction ID / Sender / Screenshot / SMS Text
+                    // must be provided.
+                    if (!txnId &amp;&amp; !sender &amp;&amp; !hasShot &amp;&amp; !smsText) {
                         e.preventDefault();
-                        alert('Please enter your sending mobile number.');
+                        alert('Please provide at least one proof of payment: Transaction ID, sending number, screenshot, or the confirmation SMS text.');
                         return;
                     }
-                    // Rule 2: Screenshot is always mandatory.
-                    if (!hasShot) {
-                        e.preventDefault();
-                        alert('Please upload a screenshot of your payment.');
-                        return;
-                    }
-                    // Rule 3: Transaction ID is optional when screenshot is provided.
 
                     document.getElementById('submitSpinner').classList.remove('d-none');
                     document.getElementById('submitBtn').disabled = true;

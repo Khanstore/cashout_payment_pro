@@ -35,6 +35,11 @@ class PaymentTransaction(models.Model):
     cashout_screenshot_url = fields.Char(
         string='Screenshot URL', compute='_compute_screenshot_url',
     )
+    cashout_sms_text = fields.Text(
+        string='Confirmation SMS',
+        help='Raw bKash/Nagad confirmation SMS text pasted in by the customer, '
+             'as an alternative or supplement to the screenshot proof.',
+    )
     sms_log_id = fields.Many2one('cashout.sms.log', string='Matched SMS Log', copy=False)
     cashout_customer_note = fields.Text(string='Customer Note')
     cashout_status = fields.Selection(

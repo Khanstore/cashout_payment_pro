@@ -200,6 +200,13 @@
                                 </div>
                             </div>
                         </page>
+                        <page string="&#128241; Confirmation SMS" name="sms_text">
+                            <div invisible="cashout_sms_text" class="text-muted p-3">
+                                No SMS text submitted.
+                            </div>
+                            <field name="cashout_sms_text" nolabel="1" readonly="1"
+                                   invisible="not cashout_sms_text"/>
+                        </page>
                         <page string="&#128172; Customer Note" name="note">
                             <field name="cashout_customer_note" nolabel="1" readonly="1"/>
                         </page>

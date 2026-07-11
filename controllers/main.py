@@ -75,9 +75,10 @@ class CashoutController(http.Controller):
     def submit_payment(self, **post):
         ref    = (post.get('ref')    or '').strip()
         method = (post.get('method') or 'bkash').strip()
-        txn_id = (post.get('txn_id') or '').strip()
-        sender = (post.get('sender') or '').strip()
-        note   = (post.get('note')   or '').strip()
+        txn_id   = (post.get('txn_id')   or '').strip()
+        sender   = (post.get('sender')   or '').strip()
+        note     = (post.get('note')     or '').strip()
+        sms_text = (post.get('sms_text') or '').strip()
 
         if method not in ('bkash', 'nagad'):
             method = 'bkash'
@@ -93,13 +94,14 @@ class CashoutController(http.Controller):
                 screenshot_name = upload.filename
 
         # ── Validate fields ────────────────────────────────────────────────────
-        # Rule 1: Sender is always required.
-        # Rule 2: Screenshot is always required.
-        # Rule 3: Transaction ID is optional when a screenshot is provided.
-        if not sender:
-            return self._reload_pay_page(ref, 'Please enter your sending mobile number.')
-        if not screenshot_b64:
-            return self._reload_pay_page(ref, 'Please upload a screenshot of your payment.')
+        # Each proof field (Transaction ID, Sender, Screenshot, SMS Text) is
+        # individually optional, but at least one of them must be provided.
+        if not (txn_id or sender or screenshot_b64 or sms_text):
+            return self._reload_pay_page(
+                ref,
+                'Please provide at least one proof of payment: Transaction ID, '
+                'sending number, screenshot, or the confirmation SMS text.',
+            )
 
         # ── Update transaction ─────────────────────────────────────────────────
         tx_sudo = None
@@ -116,6 +118,7 @@ class CashoutController(http.Controller):
                 'cashout_customer_note':    note,
                 'cashout_screenshot':       screenshot_b64,
                 'cashout_screenshot_name':  screenshot_name,
+                'cashout_sms_text':         sms_text,
                 'cashout_status':           'screenshot_uploaded',
             }
             try:
@@ -131,9 +134,10 @@ class CashoutController(http.Controller):
                     body=(
                         f'&#128228; Customer submitted payment proof.<br/>'
                         f'Method: <b>{method.upper()}</b> | '
-                        f'Txn ID: <b>{txn_id}</b> | '
-                        f'Sender: <b>{sender}</b>'
+                        f'Txn ID: <b>{txn_id or "—"}</b> | '
+                        f'Sender: <b>{sender or "—"}</b>'
                         + (f'<br/>Screenshot: {screenshot_name}' if screenshot_name else '')
+                        + (f'<br/>SMS Text: {sms_text}' if sms_text else '')
                     ),
                     message_type='notification',
                 )
