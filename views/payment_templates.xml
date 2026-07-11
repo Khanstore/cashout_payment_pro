@@ -17,7 +17,7 @@
     <!-- ===== MAIN PAYMENT PAGE — 3-Step Wizard ===== -->
     <template id="cashout_payment_page" name="Cashout Payment Page">
         <t t-call="website.layout">
-            <t t-set="title">Cashout Payment — Bkash / Nagad</t>
+            <t t-set="title">Cashout Payment</t>
             <div class="cashout-wrap">
 
                 <!-- Banner -->
@@ -25,7 +25,7 @@
                     <div class="container py-3 d-flex align-items-center justify-content-between flex-wrap gap-2">
                         <div>
                             <h1 class="cashout-title mb-0">&#128274; Secure Cashout Payment</h1>
-                            <p class="cashout-subtitle mb-0">Pay safely via Bkash or Nagad agent cashout</p>
+                            <p class="cashout-subtitle mb-0">Pay safely via mobile banking agent cashout</p>
                         </div>
                         <t t-if="tx">
                             <div class="cashout-amount-pill">
@@ -70,131 +70,91 @@
                     <div id="step-1" class="cashout-step-content">
                         <h2 class="step-heading text-center mb-4">Select your payment method</h2>
                         <div class="row g-4 justify-content-center">
-                            <div class="col-sm-6 col-lg-4">
-                                <div class="method-card bkash-method" onclick="selectMethod('bkash')" tabindex="0" role="button">
-                                    <div class="method-logo-wrap bkash-logo-wrap">
-                                        <div class="method-logo-text bkash-logo-text">bKash</div>
+                            <t t-foreach="methods" t-as="m">
+                                <div class="col-sm-6 col-lg-4">
+                                    <div class="method-card js-method-card" t-attf-data-method="#{m['code']}"
+                                         t-attf-data-name="#{m['name']}" t-attf-data-color="#{m['color']}"
+                                         t-attf-style="border-top:4px solid #{m['color']};"
+                                         tabindex="0" role="button">
+                                        <div class="method-logo-wrap" t-attf-style="background:#{m['color']}1A;">
+                                            <t t-if="m['logo_src']">
+                                                <img t-att-src="m['logo_src']" t-att-alt="m['name']"
+                                                     style="max-width:56px;max-height:56px;"/>
+                                            </t>
+                                            <t t-else="">
+                                                <div class="method-logo-text" t-attf-style="color:#{m['color']};">
+                                                    <t t-esc="m['name']"/>
+                                                </div>
+                                            </t>
+                                        </div>
+                                        <h3 class="method-name"><t t-esc="m['name']"/></h3>
+                                        <p class="method-desc">Cashout via <t t-esc="m['name']"/> agent</p>
+                                        <div class="method-select-btn" t-attf-style="background:#{m['color']};color:#fff;">
+                                            Select <t t-esc="m['name']"/> &#8594;
+                                        </div>
                                     </div>
-                                    <h3 class="method-name">bKash</h3>
-                                    <p class="method-desc">Cashout via bKash agent</p>
-                                    <div class="method-select-btn bkash-btn">Select bKash &#8594;</div>
                                 </div>
-                            </div>
-                            <div class="col-sm-6 col-lg-4">
-                                <div class="method-card nagad-method" onclick="selectMethod('nagad')" tabindex="0" role="button">
-                                    <div class="method-logo-wrap nagad-logo-wrap">
-                                        <div class="method-logo-text nagad-logo-text">Nagad</div>
-                                    </div>
-                                    <h3 class="method-name">Nagad</h3>
-                                    <p class="method-desc">Cash Out via Nagad agent</p>
-                                    <div class="method-select-btn nagad-btn">Select Nagad &#8594;</div>
+                            </t>
+                            <t t-if="not methods">
+                                <div class="col-12 text-center text-muted">
+                                    No payment methods are configured yet. Please contact the store.
                                 </div>
-                            </div>
+                            </t>
                         </div>
                     </div>
 
                     <!-- STEP 2: QR + Instructions -->
                     <div id="step-2" class="cashout-step-content d-none">
 
-                        <!-- Bkash Panel -->
-                        <div id="panel-bkash" class="method-panel d-none">
-                            <div class="method-header-bar bkash-header-bar mb-4">
-                                <span class="method-badge bkash-badge">bKash</span>
-                                <span class="method-panel-title">Scan QR Code &amp; Complete Cashout</span>
-                            </div>
-                            <div class="row g-4 align-items-start">
-                                <div class="col-md-5 text-center">
-                                    <div class="qr-wrapper bkash-qr-wrapper">
-                                        <div class="qr-label">Scan with bKash App</div>
-                                        <t t-if="bkash_qr_src">
-                                            <img src="/cashout_payment_pro/static/img/bkash.png"  alt="Bkash QR" class="qr-img-main"/>
-                                        </t>
-                                        <t t-else="">
-                                            <div class="qr-fallback-box">
-                                                <span style="font-size:3rem;">&#9638;</span>
-                                                <p>QR not configured</p>
+                        <t t-foreach="methods" t-as="m">
+                            <div t-attf-id="panel-#{m['code']}" class="method-panel d-none">
+                                <div class="method-header-bar mb-4" t-attf-style="background:#{m['color']}1A;border-left:4px solid #{m['color']};">
+                                    <span class="method-badge" t-attf-style="background:#{m['color']};color:#fff;"><t t-esc="m['name']"/></span>
+                                    <span class="method-panel-title">Scan QR Code &amp; Complete Cashout</span>
+                                </div>
+                                <div class="row g-4 align-items-start">
+                                    <div class="col-md-5 text-center">
+                                        <div class="qr-wrapper">
+                                            <div class="qr-label">Scan with <t t-esc="m['name']"/> App</div>
+                                            <t t-if="m['qr_src']">
+                                                <img t-att-src="m['qr_src']" t-att-alt="m['name'] + ' QR'" class="qr-img-main"/>
+                                            </t>
+                                            <t t-else="">
+                                                <div class="qr-fallback-box">
+                                                    <span style="font-size:3rem;">&#9638;</span>
+                                                    <p>QR not configured</p>
+                                                </div>
+                                            </t>
+                                            <div class="agent-number-row">
+                                                <span class="agent-label-sm">Agent Number</span>
+                                                <strong class="agent-num" t-attf-id="#{m['code']}-agent"><t t-esc="m['agent_number']"/></strong>
+                                                <button class="btn-copy-inline" t-attf-onclick="copyText('#{m['code']}-agent', this)">&#128203; Copy</button>
                                             </div>
-                                        </t>
-                                        <div class="agent-number-row bkash-agent-row">
-                                            <span class="agent-label-sm">Agent Number</span>
-                                            <strong class="agent-num" id="bkash-agent"><t t-esc="agent_number"/></strong>
-                                            <button class="btn-copy-inline" onclick="copyText('bkash-agent', this)">&#128203; Copy</button>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-7">
+                                        <div class="instructions-box">
+                                            <h4 class="instructions-title">&#9654; How to Pay via <t t-esc="m['name']"/></h4>
+                                            <ol class="instructions-list">
+                                                <t t-foreach="m['steps']" t-as="step">
+                                                    <li><t t-esc="step"/></li>
+                                                </t>
+                                            </ol>
+                                            <t t-if="m['instructions']">
+                                                <div class="instructions-note">
+                                                    &#128276; <t t-esc="m['instructions']"/>
+                                                </div>
+                                            </t>
                                         </div>
                                     </div>
                                 </div>
-                                <div class="col-md-7">
-                                    <div class="instructions-box bkash-instructions-box">
-                                        <h4 class="instructions-title">&#9654; How to Pay via bKash</h4>
-                                        <ol class="instructions-list">
-                                            <li>Open your <strong>bKash</strong> app</li>
-                                            <li>Tap <strong>Cashout</strong></li>
-                                            <li>Scan the QR code <em>or</em> enter agent: <strong><t t-esc="agent_number"/></strong></li>
-                                            <li>Enter the <strong>exact amount</strong> shown above</li>
-                                            <li>Enter your <strong>PIN</strong> to confirm</li>
-                                            <li>Save the <strong>Transaction ID</strong> from your SMS</li>
-                                        </ol>
-                                        <div class="instructions-note bkash-note-box">
-                                            &#128276; <t t-esc="bkash_instructions"/>
-                                        </div>
-                                    </div>
+                                <div class="text-center mt-4">
+                                    <button class="btn cashout-paid-btn" t-attf-style="background:#{m['color']};color:#fff;" onclick="goToStep3()">
+                                        &#10003; I have completed the payment &#8594;
+                                    </button>
                                 </div>
                             </div>
-                            <div class="text-center mt-4">
-                                <button class="btn cashout-paid-btn bkash-paid-btn" onclick="goToStep3()">
-                                    &#10003; I have completed the payment &#8594;
-                                </button>
-                            </div>
-                        </div>
-
-                        <!-- Nagad Panel -->
-                        <div id="panel-nagad" class="method-panel d-none">
-                            <div class="method-header-bar nagad-header-bar mb-4">
-                                <span class="method-badge nagad-badge">Nagad</span>
-                                <span class="method-panel-title">Scan QR Code &amp; Complete Cash Out</span>
-                            </div>
-                            <div class="row g-4 align-items-start">
-                                <div class="col-md-5 text-center">
-                                    <div class="qr-wrapper nagad-qr-wrapper">
-                                        <div class="qr-label">Scan with Nagad App</div>
-                                        <t t-if="nagad_qr_src">
-                                           <img src="/cashout_payment_pro/static/img/bkash.png" alt="Nagad QR" class="qr-img-main"/>
-                                        </t>
-                                        <t t-else="">
-                                            <div class="qr-fallback-box">
-                                                <span style="font-size:3rem;">&#9638;</span>
-                                                <p>QR not configured</p>
-                                            </div>
-                                        </t>
-                                        <div class="agent-number-row nagad-agent-row">
-                                            <span class="agent-label-sm">Agent Number</span>
-                                            <strong class="agent-num" id="nagad-agent"><t t-esc="agent_number"/></strong>
-                                            <button class="btn-copy-inline" onclick="copyText('nagad-agent', this)">&#128203; Copy</button>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col-md-7">
-                                    <div class="instructions-box nagad-instructions-box">
-                                        <h4 class="instructions-title">&#9654; How to Pay via Nagad</h4>
-                                        <ol class="instructions-list">
-                                            <li>Open your <strong>Nagad</strong> app</li>
-                                            <li>Tap <strong>Cash Out</strong></li>
-                                            <li>Scan the QR code <em>or</em> enter agent: <strong><t t-esc="agent_number"/></strong></li>
-                                            <li>Enter the <strong>exact amount</strong> shown above</li>
-                                            <li>Enter your <strong>PIN</strong> to confirm</li>
-                                            <li>Save the <strong>Transaction ID</strong> from your SMS</li>
-                                        </ol>
-                                        <div class="instructions-note nagad-note-box">
-                                            &#128276; <t t-esc="nagad_instructions"/>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="text-center mt-4">
-                                <button class="btn cashout-paid-btn nagad-paid-btn" onclick="goToStep3()">
-                                    &#10003; I have completed the payment &#8594;
-                                </button>
-                            </div>
-                        </div>
+                        </t>
 
                         <div class="text-center mt-3">
                             <button class="btn btn-link text-muted" onclick="goToStep1()">&#8592; Change payment method</button>
@@ -217,7 +177,7 @@
                                   class="cashout-form mt-4"
                                   id="cashoutSubmitForm">
                                 <input type="hidden" name="ref" t-att-value="ref"/>
-                                <input type="hidden" name="method" id="hiddenMethod" value="bkash"/>
+                                <input type="hidden" name="method" id="hiddenMethod" value=""/>
                                 <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
 
                                 <div class="selected-method-bar mb-4" id="selectedMethodBar">
@@ -233,7 +193,7 @@
                                             <input type="text" name="txn_id" class="form-control cashout-input"
                                                    placeholder="e.g. TXN12345678" />
                                         </div>
-                                        <div class="field-hint">From your Bkash/Nagad confirmation SMS</div>
+                                        <div class="field-hint">From your payment confirmation SMS</div>
                                     </div>
                                     <div class="col-md-6">
                                         <label class="form-label">Sending Mobile Number (optional)</label>
@@ -294,7 +254,25 @@
             </div>
 
             <script>
-                var _currentMethod = 'bkash';
+                var _currentMethod = '';
+                var _currentMethodName = '';
+                var _currentMethodColor = '#6B4EFF';
+
+                document.querySelectorAll('.js-method-card').forEach(function(card) {
+                    card.addEventListener('click', function() {
+                        selectMethod(
+                            card.getAttribute('data-method'),
+                            card.getAttribute('data-name'),
+                            card.getAttribute('data-color')
+                        );
+                    });
+                    card.addEventListener('keydown', function(e) {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            card.click();
+                        }
+                    });
+                });
 
                 function showStep(n) {
                     [1, 2, 3].forEach(function(i) {
@@ -309,10 +287,13 @@
                     window.scrollTo({top: 0, behavior: 'smooth'});
                 }
 
-                function selectMethod(method) {
+                function selectMethod(method, name, color) {
                     _currentMethod = method;
-                    document.getElementById('panel-bkash').classList.toggle('d-none', method !== 'bkash');
-                    document.getElementById('panel-nagad').classList.toggle('d-none', method !== 'nagad');
+                    _currentMethodName = name || method;
+                    _currentMethodColor = color || '#6B4EFF';
+                    document.querySelectorAll('.method-panel').forEach(function(panel) {
+                        panel.classList.toggle('d-none', panel.id !== 'panel-' + method);
+                    });
                     showStep(2);
                 }
 
@@ -322,8 +303,9 @@
                 function goToStep3() {
                     document.getElementById('hiddenMethod').value = _currentMethod;
                     var badge = document.getElementById('selectedMethodBadge');
-                    badge.textContent = _currentMethod === 'bkash' ? 'bKash' : 'Nagad';
-                    badge.className = 'sm-badge sm-badge-' + _currentMethod;
+                    badge.textContent = _currentMethodName;
+                    badge.style.background = _currentMethodColor;
+                    badge.style.color = '#fff';
                     showStep(3);
                 }
 
@@ -426,12 +408,9 @@
                             <div class="success-row">
                                 <span class="sd-label">Payment Method</span>
                                 <span class="sd-val">
-                                    <t t-if="method == 'bkash'">
-                                        <span style="background:#E2136E;color:#fff;border-radius:50px;padding:.15rem .7rem;font-weight:700;font-size:.85rem;">bKash</span>
-                                    </t>
-                                    <t t-else="">
-                                        <span style="background:#F5A623;color:#fff;border-radius:50px;padding:.15rem .7rem;font-weight:700;font-size:.85rem;">Nagad</span>
-                                    </t>
+                                    <span t-attf-style="background:#{method_color};color:#fff;border-radius:50px;padding:.15rem .7rem;font-weight:700;font-size:.85rem;">
+                                        <t t-esc="method_name"/>
+                                    </span>
                                 </span>
                             </div>
                             <t t-if="txn_id">

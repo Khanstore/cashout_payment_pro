@@ -43,6 +43,7 @@
             <search>
                 <field name="reference"/>
                 <field name="partner_id"/>
+                <field name="cashout_method" string="Payment Method"/>
                 <field name="cashout_txn_id" string="Transaction ID"/>
                 <field name="cashout_sender" string="Sending Number"/>
                 <separator/>

@@ -11,6 +11,7 @@ import base64
 import logging
 
 from odoo import http
+from odoo.exceptions import UserError
 from odoo.http import request
 
 _logger = logging.getLogger(__name__)
@@ -42,24 +43,42 @@ class CashoutController(http.Controller):
                 [('reference', '=', ref)], limit=1,
             )
 
-        # ── Build QR data-URIs ─────────────────────────────────────────────────
+        return request.render('cashout_payment_pro.cashout_payment_page', {
+            'tx':                   tx_sudo,
+            'ref':                  ref or '',
+            'provider':             provider,
+            'methods':              self._build_methods_data(provider, tx_sudo),
+            'footer_note':          provider.cashout_footer_note or '',
+        })
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # Helper: build the per-method context (QR, agent number, rendered steps)
+    # shared by the initial payment page and the error-reload path.
+    # ─────────────────────────────────────────────────────────────────────────
+    def _build_methods_data(self, provider, tx_sudo):
         def _b64_to_data_uri(field_val):
             if not field_val:
                 return ''
             raw = field_val if isinstance(field_val, str) else field_val.decode('utf-8')
             return 'data:image/png;base64,' + raw
 
-        return request.render('cashout_payment_pro.cashout_payment_page', {
-            'tx':                   tx_sudo,
-            'ref':                  ref or '',
-            'provider':             provider,
-            'agent_number':         provider.cashout_agent_number or '',
-            'bkash_qr_src':         _b64_to_data_uri(provider.cashout_bkash_qr),
-            'nagad_qr_src':         _b64_to_data_uri(provider.cashout_nagad_qr),
-            'bkash_instructions':   provider.cashout_bkash_instructions or '',
-            'nagad_instructions':   provider.cashout_nagad_instructions or '',
-            'footer_note':          provider.cashout_footer_note or '',
-        })
+        amount_str = ''
+        if tx_sudo:
+            amount_str = '{:,.2f} {}'.format(tx_sudo.amount, tx_sudo.currency_id.symbol or '')
+
+        methods = request.env['cashout.payment.method'].sudo().search([
+            ('provider_id', '=', provider.id), ('active', '=', True),
+        ])
+        return [{
+            'code':         m.code,
+            'name':         m.name,
+            'color':        m.color or '#6B4EFF',
+            'agent_number': m._effective_agent_number(),
+            'instructions': m.instructions or '',
+            'steps':        m._rendered_steps(amount_str),
+            'qr_src':       _b64_to_data_uri(m.qr_code),
+            'logo_src':     _b64_to_data_uri(m.logo),
+        } for m in methods]
 
     # ─────────────────────────────────────────────────────────────────────────
     # STEP 3 submit: receive proof from customer
@@ -74,14 +93,20 @@ class CashoutController(http.Controller):
     )
     def submit_payment(self, **post):
         ref    = (post.get('ref')    or '').strip()
-        method = (post.get('method') or 'bkash').strip()
+        method = (post.get('method') or '').strip()
         txn_id   = (post.get('txn_id')   or '').strip()
         sender   = (post.get('sender')   or '').strip()
         note     = (post.get('note')     or '').strip()
         sms_text = (post.get('sms_text') or '').strip()
 
-        if method not in ('bkash', 'nagad'):
-            method = 'bkash'
+        # Validate the submitted method against the actually configured,
+        # active cashout methods (bKash, Nagad, Rocket, Upay, or anything
+        # else the admin has added) rather than a hardcoded pair.
+        valid_codes = request.env['cashout.payment.method'].sudo().search([
+            ('active', '=', True),
+        ]).mapped('code')
+        if method not in valid_codes:
+            method = valid_codes[0] if valid_codes else method
 
         # ── Screenshot upload (read before validation so rules can check it) ────
         screenshot_b64  = False
@@ -123,6 +148,14 @@ class CashoutController(http.Controller):
             }
             try:
                 tx_sudo.write(vals)
+            except UserError as e:
+                # Raised by the Transaction ID uniqueness constraint — surface
+                # it to the customer instead of silently failing through to
+                # the "submitted" success page.
+                return self._reload_pay_page(ref, str(e))
+            except Exception as e:
+                _logger.error('Cashout: failed to write transaction %s: %s', ref, e)
+            else:
                 # Move Odoo state draft → pending so that admin's _set_done()
                 # works correctly. _set_done() silently does nothing on 'draft'.
                 if tx_sudo.state == 'draft':
@@ -141,8 +174,6 @@ class CashoutController(http.Controller):
                     ),
                     message_type='notification',
                 )
-            except Exception as e:
-                _logger.error('Cashout: failed to write transaction %s: %s', ref, e)
 
             # Notify admin
             try:
@@ -152,10 +183,15 @@ class CashoutController(http.Controller):
         else:
             _logger.warning('Cashout: no transaction found for ref=%s', ref)
 
+        method_rec = request.env['cashout.payment.method'].sudo().search(
+            [('code', '=', method)], limit=1,
+        )
         return request.render('cashout_payment_pro.cashout_success_page', {
-            'ref':    ref,
-            'method': method,
-            'txn_id': txn_id,
+            'ref':          ref,
+            'method':       method,
+            'method_name':  method_rec.name if method_rec else (method or '—'),
+            'method_color': method_rec.color if method_rec else '#6B4EFF',
+            'txn_id':       txn_id,
         })
 
     # ─────────────────────────────────────────────────────────────────────────
@@ -171,20 +207,13 @@ class CashoutController(http.Controller):
                 [('reference', '=', ref)], limit=1,
             )
 
-        def _b64_to_data_uri(v):
-            if not v:
-                return ''
-            return 'data:image/png;base64,' + (v if isinstance(v, str) else v.decode())
+        methods_data = self._build_methods_data(provider, tx_sudo) if provider else []
 
         return request.render('cashout_payment_pro.cashout_payment_page', {
             'tx':                   tx_sudo,
             'ref':                  ref,
             'provider':             provider,
-            'agent_number':         provider.cashout_agent_number if provider else '',
-            'bkash_qr_src':         _b64_to_data_uri(provider.cashout_bkash_qr if provider else None),
-            'nagad_qr_src':         _b64_to_data_uri(provider.cashout_nagad_qr if provider else None),
-            'bkash_instructions':   provider.cashout_bkash_instructions if provider else '',
-            'nagad_instructions':   provider.cashout_nagad_instructions if provider else '',
+            'methods':              methods_data,
             'footer_note':          provider.cashout_footer_note if provider else '',
             'error':                error_msg,
         })

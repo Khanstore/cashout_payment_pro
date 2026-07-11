@@ -1,11 +1,5 @@
 # -*- coding: utf-8 -*-
-import base64
-import logging
-from io import BytesIO
-
 from odoo import api, fields, models
-
-_logger = logging.getLogger(__name__)
 
 
 class PaymentProvider(models.Model):
@@ -25,22 +19,15 @@ class PaymentProvider(models.Model):
         string='SMS Webhook Secret',
         default='CASHOUT_ASHRAF_SECRET_2024',
     )
-    cashout_bkash_instructions = fields.Text(
-        string='Bkash Instructions',
-        default='Open bKash → Cashout → Scan QR or enter agent number → Enter amount → PIN → save Txn ID.',
-    )
-    cashout_nagad_instructions = fields.Text(
-        string='Nagad Instructions',
-        default='Open Nagad → Cash Out → Scan QR or enter agent number → Enter amount → PIN → save Txn ID.',
-    )
     cashout_footer_note = fields.Char(
         string='Footer Note',
         default='Upload your payment screenshot. Order confirmed within minutes.',
     )
 
-    # ── QR Codes ──────────────────────────────────────────────────────────────
-    cashout_bkash_qr = fields.Binary(string='Bkash QR Code', compute='_compute_qr_codes', store=True)
-    cashout_nagad_qr = fields.Binary(string='Nagad QR Code', compute='_compute_qr_codes', store=True)
+    # ── Payment Methods (bKash, Nagad, Rocket, Upay, ...) ──────────────────────
+    cashout_method_ids = fields.One2many(
+        'cashout.payment.method', 'provider_id', string='Payment Methods',
+    )
 
     # ── Capabilities ──────────────────────────────────────────────────────────
     @api.depends('code')
@@ -63,35 +50,6 @@ class PaymentProvider(models.Model):
         if self.code == 'cashout_pro':
             return False
         return super()._should_build_inline_form(is_validation)
-
-    # ── QR Generation ─────────────────────────────────────────────────────────
-    @api.depends('cashout_agent_number')
-    def _compute_qr_codes(self):
-        for rec in self:
-            if rec.code != 'cashout_pro' or not rec.cashout_agent_number:
-                rec.cashout_bkash_qr = False
-                rec.cashout_nagad_qr = False
-                continue
-            agent = rec.cashout_agent_number
-            rec.cashout_bkash_qr = self._generate_qr(f'bkash://cashout?to={agent}')
-            rec.cashout_nagad_qr = self._generate_qr(f'nagad://cashout?to={agent}')
-
-    @api.model
-    def _generate_qr(self, content):
-        try:
-            import qrcode
-            qr = qrcode.QRCode(version=1,
-                               error_correction=qrcode.constants.ERROR_CORRECT_H,
-                               box_size=8, border=3)
-            qr.add_data(content)
-            qr.make(fit=True)
-            img = qr.make_image(fill_color='#1a1a1a', back_color='white')
-            buf = BytesIO()
-            img.save(buf, format='PNG')
-            return base64.b64encode(buf.getvalue())
-        except Exception as exc:
-            _logger.warning('Cashout QR generation failed: %s', exc)
-            return False
 
     # ── Redirect Flow ─────────────────────────────────────────────────────────
     def _get_specific_rendering_values(self, processing_values):

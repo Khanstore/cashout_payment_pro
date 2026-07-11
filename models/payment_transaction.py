@@ -12,14 +12,45 @@ class PaymentTransaction(models.Model):
     _inherit = ['payment.transaction', 'mail.thread', 'mail.activity.mixin']
 
     # ── Cashout Fields ─────────────────────────────────────────────────────────
-    cashout_method = fields.Selection(
-        [('bkash', 'bKash'), ('nagad', 'Nagad')],
-        string='Cashout Method', default='bkash',
+    cashout_method = fields.Char(
+        string='Cashout Method',
+        help='Technical code of the payment method used (bkash, nagad, rocket, upay, ...).',
     )
+
+    def _cashout_method_label(self):
+        """Resolve the human-readable name for this transaction's cashout method,
+        looking it up in the configurable cashout.payment.method records so any
+        admin-added method (Rocket, Upay, ...) displays correctly."""
+        self.ensure_one()
+        if not self.cashout_method:
+            return '—'
+        method_rec = self.env['cashout.payment.method'].sudo().search(
+            [('code', '=', self.cashout_method)], limit=1,
+        )
+        return method_rec.name if method_rec else self.cashout_method
     cashout_txn_id = fields.Char(
         string='Transaction ID', index=True,
-        help='Transaction ID from the Bkash/Nagad confirmation SMS.',
+        help='Transaction ID from the Bkash/Nagad confirmation SMS. Must be unique — '
+             'the same Transaction ID cannot be used on more than one active order.',
     )
+
+    @api.constrains('cashout_txn_id')
+    def _check_cashout_txn_id_unique(self):
+        for rec in self:
+            txn_id = (rec.cashout_txn_id or '').strip()
+            if not txn_id:
+                continue
+            duplicate = self.search([
+                ('id', '!=', rec.id),
+                ('cashout_txn_id', '=', txn_id),
+                ('cashout_status', '!=', 'rejected'),
+            ], limit=1)
+            if duplicate:
+                raise UserError(
+                    f'Transaction ID "{txn_id}" has already been submitted on order '
+                    f'{duplicate.reference}. Each Transaction ID can only be used once — '
+                    'please double-check the ID from your SMS.'
+                )
     cashout_sender = fields.Char(string='Sending Mobile Number')
     cashout_verified = fields.Boolean(string='Verified', default=False, copy=False)
     cashout_verified_by = fields.Char(
@@ -162,6 +193,12 @@ class PaymentTransaction(models.Model):
                 raise UserError(f'Transaction {rec.reference} is already confirmed.')
             if rec.cashout_status == 'rejected':
                 raise UserError(f'Transaction {rec.reference} was rejected and cannot be confirmed.')
+            if not (rec.cashout_txn_id or '').strip():
+                raise UserError(
+                    f'Cannot confirm {rec.reference}: the Transaction ID field is empty. '
+                    'Please verify the payment and fill in the Transaction ID from the '
+                    "customer's confirmation SMS before confirming."
+                )
 
             rec.write({
                 'cashout_verified':       True,
@@ -205,9 +242,7 @@ class PaymentTransaction(models.Model):
             # admin sees exactly what failed instead of a silent no-op.
             rec._cashout_confirm_sale_order()
 
-            method_label = dict(
-                rec._fields['cashout_method'].selection
-            ).get(rec.cashout_method, rec.cashout_method or '—')
+            method_label = rec._cashout_method_label()
 
             if hasattr(rec, 'message_post'):
                 rec.message_post(
@@ -387,9 +422,7 @@ class PaymentTransaction(models.Model):
                     )
 
                 # ── 5. Register payment (same as UI "Register Payment" button) ─
-                method_label = dict(
-                    self._fields['cashout_method'].selection
-                ).get(self.cashout_method, self.cashout_method or '')
+                method_label = self._cashout_method_label()
 
                 wizard = self.env['account.payment.register'].sudo().with_context(
                     active_model='account.move',
@@ -430,9 +463,7 @@ class PaymentTransaction(models.Model):
         if not admin_users:
             admin_users = self.env['res.users'].sudo().browse([1])
 
-        method_label = dict(self._fields['cashout_method'].selection).get(
-            self.cashout_method, self.cashout_method or '—'
-        )
+        method_label = self._cashout_method_label()
         for user in admin_users:
             if not user.email:
                 continue
@@ -478,9 +509,7 @@ class PaymentTransaction(models.Model):
             except Exception as e:
                 _logger.warning('Cashout: template email failed: %s', e)
 
-        method_label = dict(self._fields['cashout_method'].selection).get(
-            self.cashout_method, self.cashout_method or '—'
-        )
+        method_label = self._cashout_method_label()
         self._cashout_send_plain_email(
             subject=f'✅ Payment Confirmed — Order {self.reference}',
             body=f"""

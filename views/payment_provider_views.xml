@@ -11,16 +11,9 @@
                       invisible="[('code', '!=', 'cashout_pro')]">
                     <group>
                         <group string="Agent Configuration">
-                            <field name="cashout_agent_number" required="1"/>
+                            <field name="cashout_agent_number" required="1"
+                                   help="Default agent number used by any payment method that doesn't set its own override. Configure individual methods (bKash, Nagad, Rocket, Upay, ...) under Cashout Pro → Configuration → Payment Methods."/>
                             <field name="cashout_secret_token"/>
-                        </group>
-                        <group string="QR Codes (Auto-Generated)">
-                            <field name="cashout_bkash_qr" widget="image"
-                                   options='{"size": [200, 200]}'
-                                   string="Bkash QR"/>
-                            <field name="cashout_nagad_qr" widget="image"
-                                   options='{"size": [200, 200]}'
-                                   string="Nagad QR"/>
                         </group>
                     </group>
                     <group string="Accounting">
@@ -30,12 +23,12 @@
                                    help="Journal used to post customer payments when a cashout transaction is confirmed. Must have at least one Inbound Payment Method configured."/>
                         </group>
                     </group>
-                    <group string="Customer Instructions">
-                        <field name="cashout_bkash_instructions" nolabel="1"
-                               placeholder="Bkash cashout instructions shown to customer..."/>
-                        <field name="cashout_nagad_instructions" nolabel="1"
-                               placeholder="Nagad cashout instructions shown to customer..."/>
+                    <group string="Checkout Page">
                         <field name="cashout_footer_note"/>
+                        <div class="text-muted" colspan="2" style="font-size:0.85em;">
+                            QR codes, agent numbers, and per-method instructions/steps are now
+                            managed under <strong>Cashout Pro → Configuration → Payment Methods</strong>.
+                        </div>
                     </group>
                 </page>
             </xpath>

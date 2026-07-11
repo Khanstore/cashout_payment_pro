@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- ── List View ────────────────────────────────────────────────────────── -->
+    <record id="cashout_payment_method_view_list" model="ir.ui.view">
+        <field name="name">cashout.payment.method.list</field>
+        <field name="model">cashout.payment.method</field>
+        <field name="arch" type="xml">
+            <list string="Payment Methods">
+                <field name="sequence" widget="handle"/>
+                <field name="name"/>
+                <field name="code"/>
+                <field name="agent_number" placeholder="Uses provider default"/>
+                <field name="color" widget="color"/>
+                <field name="active" widget="boolean_toggle"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- ── Form View ────────────────────────────────────────────────────────── -->
+    <record id="cashout_payment_method_view_form" model="ir.ui.view">
+        <field name="name">cashout.payment.method.form</field>
+        <field name="model">cashout.payment.method</field>
+        <field name="arch" type="xml">
+            <form string="Payment Method">
+                <header>
+                    <button name="action_regenerate_qr" type="object"
+                            string="Regenerate QR from Agent Number" class="btn-secondary"/>
+                </header>
+                <sheet>
+                    <field name="qr_code" widget="image" class="oe_avatar" options="{'size': [120, 120]}"/>
+                    <div class="oe_title">
+                        <label for="name"/>
+                        <h1><field name="name" placeholder="e.g. Rocket"/></h1>
+                    </div>
+                    <group>
+                        <group string="Identification">
+                            <field name="code" placeholder="e.g. rocket"/>
+                            <field name="provider_id"/>
+                            <field name="sequence"/>
+                            <field name="active"/>
+                        </group>
+                        <group string="Display">
+                            <field name="agent_number" placeholder="Leave blank to use provider default"/>
+                            <field name="color" widget="color"/>
+                            <field name="logo" widget="image"/>
+                        </group>
+                    </group>
+                    <group string="Payment Steps (numbered list shown to customer)">
+                        <field name="payment_steps" nolabel="1"
+                               placeholder="Open your Rocket app
+Tap Cashout
+Scan the QR code or enter agent: {agent}
+Enter the exact amount: {amount}
+Enter your PIN to confirm
+Save the Transaction ID from your SMS"/>
+                        <div class="text-muted" style="font-size:0.85em;">
+                            One step per line. Use <code>{agent}</code> for the agent number,
+                            <code>{amount}</code> for the order amount due, and <code>{name}</code>
+                            for this method's name — they'll be filled in automatically.
+                            Leave blank to use the default generic steps.
+                        </div>
+                    </group>
+                    <group string="Extra Note">
+                        <field name="instructions" nolabel="1"
+                               placeholder="e.g. Only cashout from a personal account, not merchant."/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- ── Action ───────────────────────────────────────────────────────────── -->
+    <record id="action_cashout_payment_methods" model="ir.actions.act_window">
+        <field name="name">Payment Methods</field>
+        <field name="res_model">cashout.payment.method</field>
+        <field name="view_mode">list,form</field>
+        <field name="context" eval="{'default_provider_id': ref('cashout_payment_pro.payment_provider_cashout_pro')}"/>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Add a payment method</p>
+            <p>Add Rocket, Upay, or any other mobile-banking cashout method here —
+               no code changes needed. It will instantly appear on the customer
+               checkout page.</p>
+        </field>
+    </record>
+</odoo>

@@ -40,4 +40,11 @@
         action="action_cashout_provider"
         sequence="10"
     />
+    <menuitem
+        id="cashout_payment_method_menu"
+        name="Payment Methods"
+        parent="cashout_config_menu"
+        action="action_cashout_payment_methods"
+        sequence="20"
+    />
 </odoo>
