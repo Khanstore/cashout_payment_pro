@@ -28,6 +28,7 @@ Backend Workflow:
     ''',
     'category': 'Payment',
     'author': 'Cashout Pro',
+    'support': 'khanstorepolwel@gmail.com',
     'depends': ['payment', 'website', 'web', 'mail'],
     'data': [
         'security/ir.model.access.csv',
