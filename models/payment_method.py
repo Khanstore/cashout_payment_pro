@@ -10,6 +10,19 @@ from odoo.exceptions import ValidationError
 _logger = logging.getLogger(__name__)
 
 
+class PaymentMethod(models.Model):
+    _inherit = 'payment.method'
+
+    cashout_payment_method_id = fields.Many2one(
+        'cashout.payment.method',
+        string='Cashout Payment Method',
+        copy=False,
+        index=True,
+        ondelete='set null',
+        help='Business/configuration record in Cashout Pro represented by this Odoo payment-method brand.',
+    )
+
+
 class CashoutPaymentMethod(models.Model):
     """A mobile-banking cashout method (bKash, Nagad, Rocket, Upay, ...).
 
@@ -33,6 +46,16 @@ class CashoutPaymentMethod(models.Model):
         ),
         ondelete='cascade',
     )
+    odoo_brand_id = fields.Many2one(
+        'payment.method', string='Odoo Payment Brand', copy=False, readonly=True,
+        help='Native Odoo payment.method brand used by Cashout at checkout. '
+             'This is created and maintained automatically from this record.',
+    )
+    # The custom Cashout record is the configurable/business representation of
+    # the same concept as an Odoo payment-method brand (e.g. VISA/Mastercard).
+    # odoo_brand_id is the native Odoo brand; the native brand points back to
+    # this record through payment.method.cashout_payment_method_id.
+
     sequence = fields.Integer(string='Sequence', default=10)
     active = fields.Boolean(string='Active', default=True)
     agent_number = fields.Char(
@@ -43,7 +66,12 @@ class CashoutPaymentMethod(models.Model):
         string='Brand Color', default='#6B4EFF',
         help='Hex color used for this method\'s badge/card, e.g. #8C3AF5',
     )
-    logo = fields.Binary(string='Logo (optional)', attachment=True)
+    image = fields.Image(
+        string='Logo (optional)',
+        attachment=True,
+        max_width=64,
+        max_height=64,
+    )
     payment_steps = fields.Text(
         string='Payment Steps',
         help='One step per line — shown as the numbered "How to Pay" list. '
@@ -65,6 +93,66 @@ class CashoutPaymentMethod(models.Model):
              'the agent number.',
     )
 
+    @api.model_create_multi
+    def create(self, vals_list):
+        records = super().create(vals_list)
+        records._sync_odoo_brands()
+        return records
+
+    def write(self, vals):
+        res = super().write(vals)
+        if set(vals) & {'name', 'code', 'active', 'image', 'sequence', 'provider_id'}:
+            self._sync_odoo_brands()
+        return res
+
+    def unlink(self):
+        brands = self.mapped('odoo_brand_id').exists()
+        res = super().unlink()
+        if brands:
+            brands.unlink()
+        return res
+
+    def _sync_odoo_brands(self):
+        """Mirror configurable Cashout methods into native Odoo brands."""
+        PaymentMethod = self.env['payment.method'].sudo()
+        for rec in self:
+            if not rec.provider_id or rec.provider_id.code != 'cashout_pro':
+                continue
+            primary = rec.provider_id.payment_method_ids.filtered(
+                lambda m: m.code == 'cashout_pro'
+            )[:1]
+            if not primary:
+                primary = PaymentMethod.search([('code', '=', 'cashout_pro')], limit=1)
+            if not primary:
+                continue
+
+            brand = rec.odoo_brand_id.exists()
+            if not brand:
+                brand = PaymentMethod.search([
+                    ('code', '=', f'cashout_{rec.code}'),
+                    ('primary_payment_method_id', '=', primary.id),
+                ], limit=1)
+
+            image = rec.image or primary.image
+            vals = {
+                'name': rec.name,
+                'code': f'cashout_{rec.code}',
+                'sequence': rec.sequence,
+                'active': rec.active,
+                'primary_payment_method_id': primary.id,
+                'cashout_payment_method_id': rec.id,
+            }
+            if image:
+                vals['image'] = image
+            if brand:
+                brand.write(vals)
+            else:
+                brand = PaymentMethod.create(vals)
+            if rec.odoo_brand_id != brand:
+                super(CashoutPaymentMethod, rec.with_context(skip_cashout_brand_sync=True)).write(
+                    {'odoo_brand_id': brand.id}
+                )
+
     _DEFAULT_STEPS = [
         'Open your {name} app',
         'Tap Cashout',
@@ -77,6 +165,8 @@ class CashoutPaymentMethod(models.Model):
     _sql_constraints = [
         ('code_provider_uniq', 'unique(code, provider_id)',
          'This technical code is already used by another payment method on this provider.'),
+        ('odoo_brand_uniq', 'unique(odoo_brand_id)',
+         'Each Cashout payment method can be linked to only one Odoo payment-method brand.'),
     ]
 
     @api.constrains('code')

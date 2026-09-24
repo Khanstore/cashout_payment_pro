@@ -135,6 +135,10 @@ class CashoutController(http.Controller):
                 [('reference', '=', ref)], limit=1,
             )
 
+        method_rec = request.env['cashout.payment.method'].sudo().search(
+            [('code', '=', method), ('active', '=', True)], limit=1,
+        )
+
         if tx_sudo:
             vals = {
                 'cashout_method':           method,
@@ -146,6 +150,11 @@ class CashoutController(http.Controller):
                 'cashout_sms_text':         sms_text,
                 'cashout_status':           'screenshot_uploaded',
             }
+            # Store the selected brand on the native Odoo transaction as well.
+            # Odoo will still expose Cashout as the transaction's primary
+            # payment method through payment.method.primary_payment_method_id.
+            if method_rec and method_rec.odoo_brand_id:
+                vals['payment_method_id'] = method_rec.odoo_brand_id.id
             try:
                 tx_sudo.write(vals)
             except UserError as e:
@@ -183,9 +192,6 @@ class CashoutController(http.Controller):
         else:
             _logger.warning('Cashout: no transaction found for ref=%s', ref)
 
-        method_rec = request.env['cashout.payment.method'].sudo().search(
-            [('code', '=', method)], limit=1,
-        )
         return request.render('cashout_payment_pro.cashout_success_page', {
             'ref':          ref,
             'method':       method,

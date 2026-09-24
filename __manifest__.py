@@ -1,7 +1,7 @@
 {
     'name': 'Cashout Payment Pro',
-    'version': '18.0.11.0.0',
-    'summary': 'Cashout/Pament from any MFS/Banking app,checkout selection, 3-step wizard, QR, screenshot, admin confirm manually',
+    'version': '18.0.11.0.10',
+    'summary': 'Configurable Cashout payment provider with dynamic payment-method brands',
     'description': '''
 Cashout Payment Pro v7 — Full-featured mobile banking payment for Odoo 18.
 
@@ -15,8 +15,16 @@ FIXED in v7:
   • cashout_status field now indexed for fast queries
   • QR base64 decode robustness fix
 
+Payment Method Branding:
+  • Cashout Pro is the primary payment method
+  • Cashout is the primary Odoo payment method
+  • bKash, Nagad, Rocket, Upay, and any admin-added method are native Odoo brands
+  • Creating a Cashout method from the backend automatically creates/syncs its Odoo brand
+  • Brand logos are displayed in the checkout row as supported methods
+  • Each cashout.payment.method is explicitly linked one-to-one with its native Odoo payment.method brand, like VISA/Mastercard under Card
+
 Customer Flow (3-Step Wizard):
-  Step 1 — Select Bkash or Nagad
+  Step 1 — Select any configured Cashout payment method
   Step 2 — Scan QR / copy agent number, complete payment in mobile app
   Step 3 — Enter Transaction ID, sending number, upload screenshot
 

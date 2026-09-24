@@ -27,7 +27,7 @@
                             string="Regenerate QR from Agent Number" class="btn-secondary"/>
                 </header>
                 <sheet>
-                    <field name="qr_code" widget="image" class="oe_avatar" options="{'size': [120, 120]}"/>
+                    <field name="image" widget="image" class="oe_avatar" options="{'size': [120, 120]}"/>
                     <div class="oe_title">
                         <label for="name"/>
                         <h1><field name="name" placeholder="e.g. Rocket"/></h1>
@@ -36,13 +36,14 @@
                         <group string="Identification">
                             <field name="code" placeholder="e.g. rocket"/>
                             <field name="provider_id"/>
+                            <field name="odoo_brand_id" string="Odoo Brand (VISA/Mastercard style)" readonly="1"/>
                             <field name="sequence"/>
                             <field name="active"/>
                         </group>
                         <group string="Display">
                             <field name="agent_number" placeholder="Leave blank to use provider default"/>
                             <field name="color" widget="color"/>
-                            <field name="logo" widget="image"/>
+                            <field name="image" widget="image"/>
                         </group>
                     </group>
                     <group string="Payment Steps (numbered list shown to customer)">

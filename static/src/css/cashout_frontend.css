@@ -3,6 +3,22 @@
    ============================================================ */
 
 /* ── Root / Variables ─────────────────────────────────────── */
+
+/* ── Odoo 18 Checkout Payment-Method Logo ───────────────────
+   Keep Cashout brand images inside the same 45x30 footprint as
+   Odoo's native payment-method logos.
+*/
+.o_payment_form .o_payment_option img,
+.o_payment_form .o_payment_option .o_payment_icon {
+    width: 45px !important;
+    height: 30px !important;
+    max-width: 45px !important;
+    max-height: 30px !important;
+    object-fit: contain !important;
+    object-position: center !important;
+    display: block !important;
+}
+
 :root {
     --bkash:        #E2136E;
     --bkash-light:  #fde8f3;

@@ -85,6 +85,9 @@ class PaymentTransaction(models.Model):
     )
 
     # ── Computed ───────────────────────────────────────────────────────────────
+    @api.onchange('cashout_sms_text')
+
+
     @api.depends('cashout_verified', 'sms_log_id')
     def _compute_verified_by(self):
         for rec in self:

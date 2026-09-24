@@ -10,6 +10,7 @@
             <field name="sequence">10</field>
             <field name="color">#E2136E</field>
             <field name="provider_id" ref="cashout_payment_pro.payment_provider_cashout_pro"/>
+            <field name="image" type="base64" file="cashout_payment_pro/static/img/bkash_payment_method.png"/>
             <field name="instructions">Open bKash app → Cashout → Scan QR or type agent number → Enter exact amount → Confirm with PIN → Note the Transaction ID from your SMS.</field>
         </record>
 
@@ -19,6 +20,7 @@
             <field name="sequence">20</field>
             <field name="color">#F5A623</field>
             <field name="provider_id" ref="cashout_payment_pro.payment_provider_cashout_pro"/>
+            <field name="image" type="base64" file="cashout_payment_pro/static/img/nagad_payment_method.png"/>
             <field name="instructions">Open Nagad app → Cash Out → Scan QR or type agent number → Enter exact amount → Confirm with PIN → Note the Transaction ID from your SMS.</field>
         </record>
 
