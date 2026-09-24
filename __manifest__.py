@@ -1,6 +1,6 @@
 {
     'name': 'Cashout Payment Pro',
-    'version': '18.0.11.0.11',
+    'version': '18.0.11.0.12',
     'summary': 'Configurable Cashout payment provider with dynamic payment-method brands',
     'description': '''
 Cashout Payment Pro v7 — Full-featured mobile banking payment for Odoo 18.

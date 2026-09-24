@@ -77,7 +77,7 @@ class CashoutController(http.Controller):
             'instructions': m.instructions or '',
             'steps':        m._rendered_steps(amount_str),
             'qr_src':       _b64_to_data_uri(m.qr_code),
-            'logo_src':     _b64_to_data_uri(m.logo),
+            'logo_src':     _b64_to_data_uri(m.image),
         } for m in methods]
 
     # ─────────────────────────────────────────────────────────────────────────
