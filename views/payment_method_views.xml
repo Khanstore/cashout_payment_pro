@@ -23,8 +23,9 @@
         <field name="arch" type="xml">
             <form string="Payment Method">
                 <header>
-                    <button name="action_regenerate_qr" type="object"
-                            string="Regenerate QR from Agent Number" class="btn-secondary"/>
+<!--                    fixme  generated qr is useless
+<button name="action_regenerate_qr" type="object"-->
+<!--                            string="Regenerate QR from Agent Number" class="btn-secondary"/>-->
                 </header>
                 <sheet>
                     <field name="image" widget="image" class="oe_avatar" options="{'size': [120, 120]}"/>
@@ -43,7 +44,7 @@
                         <group string="Display">
                             <field name="agent_number" placeholder="Leave blank to use provider default"/>
                             <field name="color" widget="color"/>
-                            <field name="image" widget="image"/>
+                            <field name="qr_code" widget="image"/>
                         </group>
                     </group>
                     <group string="Payment Steps (numbered list shown to customer)">
