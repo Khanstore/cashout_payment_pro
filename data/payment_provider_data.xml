@@ -2,7 +2,7 @@
 <odoo>
     <!-- Created once. The upgrade block below is intentionally separate so
          existing installations always receive the current image and method link. -->
-    <data >
+    <data noupdate="1">
         <record id="payment_method_cashout_pro" model="payment.method">
             <field name="name">Cashout</field>
             <field name="code">cashout_pro</field>
@@ -18,7 +18,7 @@
             <field name="code">cashout_pro</field>
             <field name="state">enabled</field>
             <field name="is_published">True</field>
-<!--            <field name="image" type="base64" file="cashout_payment_pro/static/description/icon.png"/>-->
+            <field name="image_128" type="base64" file="cashout_payment_pro/static/description/icon.png"/>
             <field name="cashout_agent_number">01970569256</field>
             <field name="cashout_secret_token">CASHOUT_ASHRAF_SECRET_2024</field>
             <field name="cashout_footer_note">After cashout, upload your transaction screenshot as payment proof. Your order will be confirmed within a few minutes.</field>
@@ -33,7 +33,7 @@
     <!-- Re-applied on every module upgrade. This also repairs installations
          created by earlier versions where image_128 was incorrectly used on
          payment.method. -->
-    <data noupdate="0">
+    <!--<data noupdate="0">
         <record id="payment_method_cashout_pro" model="payment.method">
             <field name="name">Cashout</field>
             <field name="image" type="base64" file="cashout_payment_pro/static/description/icon.png"/>
@@ -46,5 +46,5 @@
         </record>
 
 
-    </data>
+    </data>-->
 </odoo>

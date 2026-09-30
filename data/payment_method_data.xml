@@ -2,7 +2,7 @@
 <odoo>
     <!-- ══ noupdate="1" — only written on FRESH install, so admin edits/additions
          (like adding Rocket or Upay) survive future module upgrades ══════ -->
-    <data >
+    <data noupdate="1">
 
         <record id="cashout_method_bkash" model="cashout.payment.method">
             <field name="name">bKash</field>
